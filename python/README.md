@@ -2,7 +2,7 @@
 
 [![image](https://img.shields.io/pypi/v/joop.svg)](https://pypi.python.org/pypi/joop)
 
-**OOP Paradigm with an emphasis on DAO patterns and HTMX.**
+**OOP Paradigms with an emphasis on DAO patterns and HTMX.**
 
 
 -   Free software: Apache Software License 2.0
