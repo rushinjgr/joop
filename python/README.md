@@ -22,6 +22,7 @@ To run the CLI: `python -m joop.cli`
 For tests, run `python -m unittest joop.tests` (add `-vvv` to see output)
 
 For coverage, run:
+```
 coverage run -m unittest joop.tests
 coverage report
 ```
