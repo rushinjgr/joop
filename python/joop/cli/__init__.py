@@ -1,0 +1,1 @@
+from joop.cli.__main__ import main
