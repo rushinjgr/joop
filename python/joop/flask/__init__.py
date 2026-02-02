@@ -15,7 +15,7 @@ from __future__ import absolute_import
 from flask import Flask
 from joop.web.j_env import joop_env
 from joop.flask.example import (
-    FlaskHello, FlaskName, FlaskTable
+    FlaskHello, FlaskName, FlaskTablePage
 )
 
 app = Flask(__name__)
@@ -28,4 +28,4 @@ app.jinja_env = joop_env
 # ex. MyView.add_to_app(app)
 FlaskHello.add_to_app(app)
 FlaskName.add_to_app(app)
-FlaskTable.add_to_app(app)
+FlaskTablePage.add_to_app(app)

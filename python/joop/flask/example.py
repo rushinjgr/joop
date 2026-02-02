@@ -8,7 +8,7 @@ from joop.web.examples.view import (
     NameView, HelloView
 )
 
-from joop.web.examples.table import MyTableView
+from joop.web.examples.table import MyTableWholePage
 
 from joop.flask.flask_view import FlaskView
 
@@ -16,4 +16,4 @@ class FlaskHello(HelloView, FlaskView): pass
 
 class FlaskName(NameView, FlaskView): pass
 
-class FlaskTable(MyTableView, FlaskView): pass
+class FlaskTablePage(MyTableWholePage, FlaskView): pass

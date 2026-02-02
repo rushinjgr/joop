@@ -1,0 +1,42 @@
+<div x-data>
+    <table class="table-auto border-collapse border border-black">
+        <thead>
+            <tr>
+                <!-- Accessing the global store via $store.{{ data('definition_name') }} -->
+                <template x-for="column in $store.{{ data('definition_name') }}.columns" :key="column.key">
+                    <th x-text="column.label"></th>
+                </template>
+            </tr>
+        </thead>
+        <tbody>
+            <template x-for="(row, index) in $store.{{ data('definition_name') }}.rows" :key="index">
+                <tr>
+                    <template x-for="column in $store.{{ data('definition_name') }}.columns" :key="column.key">
+                        <td x-text="row[column.key]"></td>
+                    </template>
+                </tr>
+            </template>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener("alpine:init", () => {
+        // Register the global store
+        Alpine.store("{{ data('definition_name') }}", {
+            columns: [
+                {% for header in data('table_headers') -%}
+                    { label: "{{ header }}", key: "{{ header }}" },
+                {% endfor -%}
+            ],
+            rows: [
+                {% for row in data('rows') -%}
+                    {% set row_dict = row.to_dict() -%}
+                    {% for header in data('table_headers') -%}
+                        {"{{ header }}" : '{{ row_dict[header] }}'},
+                    {% endfor -%}
+                {% endfor -%}
+            ],
+        });
+    });
+</script>
