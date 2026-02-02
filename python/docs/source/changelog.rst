@@ -1,6 +1,6 @@
 Changelog
 =========
 
-Version 0.0.1 (2025-12-29)
+Version 0.0.1 (2026-02-02)
 --------------------------
-- Created skeleton for repo.
+- Initial version. Features AlpineJS-powered table.
