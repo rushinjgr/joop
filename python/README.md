@@ -2,7 +2,7 @@
 
 [![image](https://img.shields.io/pypi/v/joop.svg)](https://pypi.python.org/pypi/joop)
 
-**OOP Paradigms with an emphasis on DAO patterns and HTMX.**
+**OOP Paradigms with an emphasis on DAO patterns, HTMX, and AlpineJS.**
 
 
 -   Free software: Apache Software License 2.0
@@ -11,7 +11,7 @@
 
 ## Features
 
--   Just a stub for now.
+-   HTML Components for server-side rendering.
 
 ## Getting Started
 
@@ -45,9 +45,7 @@ It is recommended to use `poetry` to manage the virtual environment and dependen
    poetry shell
    ```
 
-### Running Commands
-
-Then, follow these steps:
+### Build commands
 
 1. Run `poetry check` to validate the `pyproject.toml` file:
 

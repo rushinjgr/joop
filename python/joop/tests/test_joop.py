@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-"""Tests for `joop` package."""
+"""High-level test suite. Currently, verifies that the CLI works.."""
 
 
 import unittest
 from click.testing import CliRunner
 
-from joop import cli
+from joop.cli import main
 
 
 class TestJoop(unittest.TestCase):
@@ -18,15 +18,12 @@ class TestJoop(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    def test_000_something(self):
-        """Test something."""
-
-    def test_command_line_interface(self):
+    def test_001_command_line_interface(self):
         """Test the CLI."""
         runner = CliRunner()
-        result = runner.invoke(cli.main)
+        result = runner.invoke(main)
         assert result.exit_code == 0
         assert 'Hello World' in result.output
-        help_result = runner.invoke(cli.main, ['--help'])
+        help_result = runner.invoke(main, ['--help'])
         assert help_result.exit_code == 0
-        assert '--help  Show this message and exit.' in help_result.output
+        assert '--help      Show this message and exit.' in help_result.output

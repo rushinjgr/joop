@@ -42,3 +42,10 @@ exclude_patterns = []
 
 html_theme = 'alabaster'
 html_static_path = ['_static']
+
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',  # For Google-style or NumPy-style docstrings
+    'sphinx.ext.autosummary',  # Enables recursive documentation
+]

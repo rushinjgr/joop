@@ -1,6 +1,6 @@
 """Environment management module for joop.
 
-Important: The main purpose of this module is to be an interface for the jinja environment proxy
+Important: The main purpose of this module is to be an interface layer for the jinja environment proxy
     contained within joop for cross platform purposes (ex. run with or without flask.)
 
 This module provides functions to set and get the global templating environment for the joop instance.
