@@ -120,10 +120,13 @@ class MyTablePage(HTMLComponent):
         Represents subcomponents of the `MyTablePage`.
 
         Attributes:
-            my_t (MyTableComponent): An instance of the `MyTableComponent`.
+            table (MyTableComponent): An instance of the `MyTableComponent`.
         """
-        my_t = MyTableComponent
-        table : my_t = my_t()
+        table: MyTableComponent
+
+        def __init__(self):
+            super().__init__()
+            self.table = MyTableComponent()
 
 class MyTableWholePage(View):
     """
@@ -134,7 +137,7 @@ class MyTableWholePage(View):
     """
     _component_type = MyTablePage
 
-    class Endpoint():
+    class Endpoint(View.Endpoint):
         """
         Defines the endpoint for the `MyTableWholePage` view.
 

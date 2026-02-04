@@ -15,7 +15,7 @@ class HelloView(View):
 
     _component_type = HelloWorld
 
-    class Endpoint():
+    class Endpoint(View.Endpoint):
         _url = HELLO_ROOT
         _name = HELLO_DESIG
         _methods = [HttpMethod.GET.value]
@@ -24,7 +24,7 @@ class NameView(View):
 
     _component_type = HelloName
 
-    class Endpoint():
+    class Endpoint(View.Endpoint):
         _url = HELLO_ROOT + "/<string:first_name>/<string:last_name>"
         _name = HELLO_DESIG + "_name"
         _methods = [HttpMethod.GET.value]

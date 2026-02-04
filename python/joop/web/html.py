@@ -204,7 +204,6 @@ class HTMLComponent(Component, HTML):
                 'sc' : self.subs.get_rendered(),
                 'data' : asdict(self.data)
             } 
-        print(_joop)
         return self._loaded_template.render(
             joop = _joop
         )

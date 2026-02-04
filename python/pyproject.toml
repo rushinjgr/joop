@@ -1,6 +1,6 @@
 [project]
 name = "joop"
-version = "0.0.1"
+version = "0.0.2"
 description = "Justin's Object-Oriented Paradigms"
 authors = [
     {name = "Justin Rushin"}
