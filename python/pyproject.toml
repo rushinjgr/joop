@@ -28,7 +28,7 @@ keywords = ["object-oriented programming", "DAO", "HTMX", "AlpineJS", "Python"]
 
 [project.urls]
 bugs = "https://github.com/rushinjgr/joop/issues"
-changelog = "https://github.com/rushinjgr/joop/blob/master/python/docs/changelog.md"
+changelog = "https://github.com/rushinjgr/joop/blob/master/python/docs/source/changelog.rst"
 homepage = "https://github.com/rushinjgr/joop"
 source = "https://github.com/rushinjgr/joop"
 
