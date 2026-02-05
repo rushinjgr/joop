@@ -1,7 +1,11 @@
 Changelog
 =========
 
-Version 0.0.2 (2026-02-05)
+Version 0.0.4 (2026-02-05)
+--------------------------
+- Add ORM config dataclass.
+
+Version 0.0.3 (2026-02-05)
 --------------------------
 - Add SQLConfig dataclass.
 

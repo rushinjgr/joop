@@ -22,3 +22,13 @@ class SQLConfig:
     username: str
     password: str
     schema_name: Optional[str]
+
+@dataclass
+class ORMSQLConfig(SQLConfig):
+    """
+    A DB with an associated schema and alembic migrations of a particular arrangement.
+
+    Attributes:
+        db_module_path (str): The path to the database module.
+    """
+    db_module_path: str # Path
