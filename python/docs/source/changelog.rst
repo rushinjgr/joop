@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.0.2 (2026-02-05)
+--------------------------
+- Add SQLConfig dataclass.
+
 Version 0.0.2 (2026-02-03)
 --------------------------
 - Var bug fixes.
