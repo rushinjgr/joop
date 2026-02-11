@@ -6,7 +6,7 @@ It demonstrates the usage of the `AlpineTableComponent` for rendering tables and
 from joop.web.components import AlpineTableComponent
 from joop.web.view import View
 from joop.web.html import HTMLComponent
-from joop.http.methods import HttpMethod
+from joop.net.http.methods import HttpMethod
 from joop.web.examples.view import HELLO_DESIG, HELLO_ROOT
 from joop.dao import DAO
 from pydantic import BaseModel

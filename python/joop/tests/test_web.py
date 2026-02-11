@@ -3,7 +3,8 @@
 We're testing both components, their templates, and the rendering here.
 """
 
-from joop.web import HTMLComponent
+import json
+from joop.web import HTMLComponent, JSONComponent
 import unittest
 from dataclasses import is_dataclass, dataclass, asdict
 from joop.tests.test_templater import environment
@@ -25,6 +26,44 @@ BaseTestHTMLComponent): pass
 
 class MyHelloSuper(HelloSuperComponent,
 BaseTestHTMLComponent):     pass
+
+
+class ExampleJSONComponent(JSONComponent):
+
+    class Inputs(JSONComponent.Inputs):
+        message: str
+
+    class Data(JSONComponent.Data):
+        message: str
+
+        @classmethod
+        def from_inputs(
+                cls,
+                inputs: "ExampleJSONComponent.Inputs",
+                ) -> "ExampleJSONComponent.Data":
+            return cls(message=inputs.message)
+
+    class SubComponents(JSONComponent.SubComponents):
+        pass
+
+
+class ExampleJSONSuperComponent(JSONComponent):
+
+    class Inputs(JSONComponent.Inputs):
+        message: str
+
+    class Data(JSONComponent.Data):
+        message: str
+
+        @classmethod
+        def from_inputs(
+                cls,
+                inputs: "ExampleJSONSuperComponent.Inputs",
+                ) -> "ExampleJSONSuperComponent.Data":
+            return cls(message=inputs.message)
+
+    class SubComponents(JSONComponent.SubComponents):
+        child: ExampleJSONComponent
 
 class TestHTMLComponent(unittest.TestCase):
     
@@ -73,3 +112,44 @@ class TestHTMLComponent(unittest.TestCase):
         hello_super_html = self.hello_super.render()
         _tgt_html = """<p>I'm a supercomponent! And I say:</p>\n<p>Hello, World!</p>"""
         assert hello_super_html == _tgt_html
+
+
+class TestJSONComponent(unittest.TestCase):
+
+    def test_000_json_component_renders_json(self):
+        component = ExampleJSONComponent()
+        component.inputs = component.Inputs(message="Hello JSON")
+        component.subs = component.SubComponents()
+
+        rendered_json = component.render()
+
+        self.assertEqual(
+            json.loads(rendered_json),
+            {
+                "sc": {},
+                "data": {"message": "Hello JSON"},
+            },
+        )
+
+    def test_001_json_component_renders_nested_subcomponents(self):
+        component = ExampleJSONSuperComponent()
+        component.inputs = component.Inputs(message="Parent")
+        child = ExampleJSONComponent(parent=component)
+        child.inputs = child.Inputs(message="Child")
+        child.subs = child.SubComponents()
+        component.subs = component.SubComponents(child=child)
+
+        rendered_json = component.render()
+
+        self.assertEqual(
+            json.loads(rendered_json),
+            {
+                "sc": {
+                    "child": {
+                        "sc": {},
+                        "data": {"message": "Child"},
+                    }
+                },
+                "data": {"message": "Parent"},
+            },
+        )

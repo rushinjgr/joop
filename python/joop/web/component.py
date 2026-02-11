@@ -14,8 +14,9 @@ Classes:
 
 """
 
+import json
 from typing import Optional
-from dataclasses import dataclass, fields
+from dataclasses import asdict, dataclass, fields
 from abc import ABCMeta
 
 from joop.abstract import AbstractMethod
@@ -160,4 +161,40 @@ class JSONComponent(Component):
     Inherits:
         Component: The base Component class.
     """
-    pass
+
+    class SubComponents(Component.SubComponents):
+        """Manage JSON-rendered child components."""
+
+        @property
+        def get_all(self) -> dict[str, "Component"]:
+            """Return all subcomponents by field name."""
+            return {field.name: getattr(self, field.name) for field in fields(self)}
+
+        def render(self) -> None:
+            """Render all JSON subcomponents to native Python data."""
+            self._rendered_sc_json = {}
+            for _sc_name, _sc_inst in self.get_all.items():
+                self._rendered_sc_json[_sc_name] = _sc_inst.render_data(
+                    as_subcomponent=True
+                )
+
+        def get_rendered(self) -> dict[str, object]:
+            """Return all rendered subcomponents as JSON-compatible data."""
+            self.render()
+            return self._rendered_sc_json
+
+    def render_data(self, as_subcomponent: bool = False, **kwargs) -> dict[str, object]:
+        """Render the component to JSON-compatible Python data."""
+        if as_subcomponent is True:
+            self.inputs = self.Inputs(**kwargs)
+        super().render()
+        if as_subcomponent is True:
+            self.subs = self.SubComponents()
+        return {
+            "sc": self.subs.get_rendered(),
+            "data": asdict(self.data),
+        }
+
+    def render(self, as_subcomponent: bool = False, **kwargs) -> str:
+        """Render the component to a JSON string."""
+        return json.dumps(self.render_data(as_subcomponent=as_subcomponent, **kwargs))

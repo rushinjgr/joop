@@ -14,4 +14,4 @@ API Documentation
    joop.dao
    joop.cli
    joop.flask
-   joop.http
+   joop.net

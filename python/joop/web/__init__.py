@@ -9,6 +9,6 @@ Modules:
 
 """
 
-from joop.web.component import Component #, JSONComponent
+from joop.web.component import Component, JSONComponent
 from joop.web.html import HTML, HTMLComponent
 from joop.web.view import View
