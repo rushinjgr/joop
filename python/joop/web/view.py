@@ -166,6 +166,25 @@ class View():
     _add_to_app = AbstractMethod(_add_to_app)
     
     @classmethod
+    def _check_if_implemented(cls):
+        """
+        Check if the required attributes for the view are implemented.
+
+        This method ensures that the necessary attributes for the view, such as
+        `Endpoint._url`, `Endpoint._name`, `Endpoint._methods`, and `_component_type`,
+        are properly defined. If any of these attributes are not set, a
+        `NotImplementedError` is raised.
+
+        Raises:
+            NotImplementedError: If any of the required attributes are not implemented.
+        """
+        if (cls.Endpoint._url is None or
+            cls.Endpoint._name is None or
+            cls.Endpoint._methods is None or
+            cls._component_type is None):
+            raise NotImplementedError("Abstract; not implemented")
+
+    @classmethod
     def add_to_app(cls, app : object):
         """
         Add the view to a web application with the specified configuration.
@@ -179,11 +198,7 @@ class View():
         Raises:
             NotImplementedError: If the view's configuration is incomplete or invalid.
         """
-        if (cls.Endpoint._url is None or
-            cls.Endpoint._name is None or
-            cls.Endpoint._methods is None or
-            cls._component_type is None):
-            raise NotImplementedError("Abstract; not implemented")
+        cls._check_if_implemented()
 
         view_func = cls.render
         if cls._as_response == True:

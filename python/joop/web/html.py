@@ -57,7 +57,7 @@ class HTML():
         if j_env is not None:
             self._jinja_env = j_env
         elif self._jinja_env is None:
-                self._jinja_env = get_joop_env()
+            self._jinja_env = get_joop_env()
         
         if self._jinja_env is None:
             raise ValueError("A Jinja2 environment must be provided either as a class property or during initialization.")
