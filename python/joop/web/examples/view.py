@@ -4,7 +4,7 @@ This is an example of how to define Views from components.
 
 """
 
-from joop.http.methods import HttpMethod
+from joop.net.http.methods import HttpMethod
 from joop.web.examples.hello import HelloWorld, HelloName
 from joop.web.view import View
 

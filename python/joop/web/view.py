@@ -12,7 +12,7 @@ Classes:
 from typing import List, Callable, Type
 
 from joop.abstract import AbstractMethod
-from joop.http.methods import HttpMethod
+from joop.net.http.methods import HttpMethod
 from joop.web.component import Component
 
 class View():
