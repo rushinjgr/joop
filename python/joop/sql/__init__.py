@@ -5,8 +5,11 @@ A simple dataclass for holding SQL connection vars.
 from dataclasses import dataclass
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address, ip_address
+from pathlib import Path
 from typing import Optional, Union
 from urllib.parse import quote, urlsplit, urlunsplit
+
+from sqlmodel import create_engine
 
 from joop.net import Credential
 
@@ -145,6 +148,24 @@ class SQLConfig:
     def parsed_url(self):
         """Return the stdlib parsed URL view of this config."""
         return urlsplit(self.url)
+
+    def get_engine_url(self) -> str:
+        """Return a SQLAlchemy-compatible engine URL for this config."""
+        if self.scheme == SQLScheme.SQLITE:
+            path = self.schema_name or ":memory:"
+            if path == ":memory:":
+                return "sqlite:///:memory:"
+
+            resolved_path = Path(path)
+            if resolved_path.is_absolute():
+                return f"sqlite:///{resolved_path}"
+            return f"sqlite:///{resolved_path.as_posix()}"
+
+        return self.url
+
+    def get_engine(self):
+        """Create a SQLAlchemy engine for this config."""
+        return create_engine(self.get_engine_url())
 
 @dataclass
 class ORMSQLConfig(SQLConfig):

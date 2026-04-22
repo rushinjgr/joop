@@ -1,6 +1,8 @@
 """Test suite catalog."""
 
 # from joop.tests.test_joop import TestJoop
+from joop.tests.test_dataflow import TestDataFlow, TestSQLDBDataCatcher
+from joop.tests.test_dataflow_sqlite_example import TestSQLiteDataFlowExample
 from joop.tests.test_web import TestHTMLComponent
 from joop.tests.test_view import TestView
 from joop.tests.test_sql import TestORMSQLConfig, TestSQLConfig
