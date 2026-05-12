@@ -131,7 +131,23 @@ class TestJSONComponent(unittest.TestCase):
             },
         )
 
-    def test_001_json_component_renders_nested_subcomponents(self):
+    def test_001_json_component_render_data_supports_subcomponent_kwargs(self):
+        component = ExampleJSONComponent()
+
+        rendered_data = component.render_data(
+            as_subcomponent=True,
+            message="Hello Subcomponent",
+        )
+
+        self.assertEqual(
+            rendered_data,
+            {
+                "sc": {},
+                "data": {"message": "Hello Subcomponent"},
+            },
+        )
+
+    def test_002_json_component_renders_nested_subcomponents(self):
         component = ExampleJSONSuperComponent()
         component.inputs = component.Inputs(message="Parent")
         child = ExampleJSONComponent(parent=component)

@@ -125,7 +125,7 @@ class Heartbeat(DataFlow):
                 "data link datamodel."
             )
 
-    def _sync(
+    def sync(
             self,
             outbound_data: PrimaryOutboundFlowModel,
             ) -> Optional[InboundFlowModel]:
@@ -153,9 +153,3 @@ class Heartbeat(DataFlow):
             return None
 
         return self.primary_inbound_data_link.accept(response_model)
-    
-    def _sync(
-            self,
-            outbound_data: PrimaryOutboundFlowModel,
-            ) -> Optional[InboundFlowModel]:
-        pass

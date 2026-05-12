@@ -12,6 +12,7 @@ API Documentation
 
    joop.web
    joop.dao
+   joop.dataflow
    joop.cli
    joop.flask
    joop.net

@@ -185,10 +185,10 @@ class JSONComponent(Component):
 
     def render_data(self, as_subcomponent: bool = False, **kwargs) -> dict[str, object]:
         """Render the component to JSON-compatible Python data."""
-        if as_subcomponent is True:
+        if as_subcomponent is True and (kwargs or not hasattr(self, "inputs")):
             self.inputs = self.Inputs(**kwargs)
         super().render()
-        if as_subcomponent is True:
+        if not hasattr(self, "subs"):
             self.subs = self.SubComponents()
         return {
             "sc": self.subs.get_rendered(),
