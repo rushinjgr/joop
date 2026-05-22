@@ -180,6 +180,12 @@ class HTMLComponent(Component, HTML):
         """
         self._loaded_template = self._get_template()
 
+    def _get_joop_context(self) -> dict:
+        return {
+            "sc": self.subs.get_rendered(),
+            "data": asdict(self.data),
+        }
+
     def render(self, as_subcomponent : bool = False, **kwargs) -> str:
         """
         Render the component as a string, optionally as a subcomponent.
@@ -200,12 +206,8 @@ class HTMLComponent(Component, HTML):
         if as_subcomponent == True:
             self.subs = self.SubComponents()
         self._load_template()
-        _joop = {
-                'sc' : self.subs.get_rendered(),
-                'data' : asdict(self.data)
-            } 
         return self._loaded_template.render(
-            joop = _joop
+            joop=self._get_joop_context()
         )
 
     # render.__isabstractmethod__ = True
