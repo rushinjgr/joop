@@ -125,6 +125,18 @@ class Component(metaclass=ABCMeta):
         """
         self.data = self.Data.from_inputs(self.inputs)
 
+    def _get_joop_context(self) -> dict[str, object]:
+        """
+        Build the default joop render context.
+
+        Subclasses may extend this with ``super()`` to add renderer-agnostic
+        context while preserving the standard ``sc`` and ``data`` keys.
+        """
+        return {
+            "sc": self.subs.get_rendered(),
+            "data": asdict(self.data),
+        }
+
     def render(self) -> str:
         """
         Abstract method to render the component as a string.
@@ -190,10 +202,7 @@ class JSONComponent(Component):
         super().render()
         if not hasattr(self, "subs"):
             self.subs = self.SubComponents()
-        return {
-            "sc": self.subs.get_rendered(),
-            "data": asdict(self.data),
-        }
+        return self._get_joop_context()
 
     def render(self, as_subcomponent: bool = False, **kwargs) -> str:
         """Render the component to a JSON string."""

@@ -16,7 +16,7 @@ Classes:
 
 import jinja2
 from typing import Optional
-from dataclasses import asdict, fields
+from dataclasses import fields
 from joop.web.component import Component
 from joop.web.j_env import get_joop_env
 
@@ -179,12 +179,6 @@ class HTMLComponent(Component, HTML):
         stores it in the _loaded_template attribute.
         """
         self._loaded_template = self._get_template()
-
-    def _get_joop_context(self) -> dict:
-        return {
-            "sc": self.subs.get_rendered(),
-            "data": asdict(self.data),
-        }
 
     def render(self, as_subcomponent : bool = False, **kwargs) -> str:
         """

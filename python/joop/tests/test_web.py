@@ -6,7 +6,7 @@ We're testing both components, their templates, and the rendering here.
 import json
 from joop.web import HTMLComponent, JSONComponent
 import unittest
-from dataclasses import is_dataclass, dataclass, asdict
+from dataclasses import is_dataclass
 from joop.tests.test_templater import environment
 from joop.web.examples.hello import (
     HelloWorld, HelloName, HelloSuperComponent
@@ -65,6 +65,36 @@ class ExampleJSONSuperComponent(JSONComponent):
     class SubComponents(JSONComponent.SubComponents):
         child: ExampleJSONComponent
 
+
+class ExampleContextHTMLComponent(BaseTestHTMLComponent):
+    _template_location = "hello.html"
+
+    class Inputs(BaseTestHTMLComponent.Inputs):
+        pass
+
+    class Data(BaseTestHTMLComponent.Data):
+        @classmethod
+        def from_inputs(
+                cls,
+                inputs: "ExampleContextHTMLComponent.Inputs",
+                ) -> "ExampleContextHTMLComponent.Data":
+            return super()._from_inputs(inputs)
+
+    class SubComponents(BaseTestHTMLComponent.SubComponents):
+        pass
+
+    def _get_joop_context(self) -> dict:
+        context = super()._get_joop_context()
+        context["extra"] = "html"
+        return context
+
+
+class ExampleContextJSONComponent(ExampleJSONComponent):
+    def _get_joop_context(self) -> dict:
+        context = super()._get_joop_context()
+        context["extra"] = "json"
+        return context
+
 class TestHTMLComponent(unittest.TestCase):
     
     def _setup_hello(self):
@@ -112,6 +142,18 @@ class TestHTMLComponent(unittest.TestCase):
         hello_super_html = self.hello_super.render()
         _tgt_html = """<p>I'm a supercomponent! And I say:</p>\n<p>Hello, World!</p>"""
         assert hello_super_html == _tgt_html
+
+    def test_004_html_component_can_extend_joop_context(self):
+        component = ExampleContextHTMLComponent()
+        component.inputs = component.Inputs()
+        component.subs = component.SubComponents()
+        component.render()
+
+        context = component._get_joop_context()
+
+        self.assertEqual(context["extra"], "html")
+        self.assertEqual(context["sc"], {})
+        self.assertEqual(context["data"], {})
 
 
 class TestJSONComponent(unittest.TestCase):
@@ -167,5 +209,21 @@ class TestJSONComponent(unittest.TestCase):
                     }
                 },
                 "data": {"message": "Parent"},
+            },
+        )
+
+    def test_003_json_component_can_extend_joop_context(self):
+        component = ExampleContextJSONComponent()
+        component.inputs = component.Inputs(message="Hello JSON")
+        component.subs = component.SubComponents()
+
+        rendered_json = component.render()
+
+        self.assertEqual(
+            json.loads(rendered_json),
+            {
+                "sc": {},
+                "data": {"message": "Hello JSON"},
+                "extra": "json",
             },
         )
