@@ -180,6 +180,17 @@ class HTMLComponent(Component, HTML):
         """
         self._loaded_template = self._get_template()
 
+    def _get_template_render_kwargs(self) -> dict:
+        """
+        Build keyword arguments passed directly to the Jinja template.
+
+        Subclasses may extend this with ``super()`` to expose additional
+        template variables alongside the default ``joop`` context.
+        """
+        return {
+            "joop": self._get_joop_context(),
+        }
+
     def render(self, as_subcomponent : bool = False, **kwargs) -> str:
         """
         Render the component as a string, optionally as a subcomponent.
@@ -201,7 +212,7 @@ class HTMLComponent(Component, HTML):
             self.subs = self.SubComponents()
         self._load_template()
         return self._loaded_template.render(
-            joop=self._get_joop_context()
+            **self._get_template_render_kwargs()
         )
 
     # render.__isabstractmethod__ = True

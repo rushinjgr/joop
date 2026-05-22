@@ -95,6 +95,31 @@ class ExampleContextJSONComponent(ExampleJSONComponent):
         context["extra"] = "json"
         return context
 
+
+class ExampleTemplateKwargsHTMLComponent(BaseTestHTMLComponent):
+    _template_location = "hello_with_prefix.html"
+
+    class Inputs(BaseTestHTMLComponent.Inputs):
+        message: str
+
+    class Data(BaseTestHTMLComponent.Data):
+        message: str
+
+        @classmethod
+        def from_inputs(
+                cls,
+                inputs: "ExampleTemplateKwargsHTMLComponent.Inputs",
+                ) -> "ExampleTemplateKwargsHTMLComponent.Data":
+            return cls(message=inputs.message)
+
+    class SubComponents(BaseTestHTMLComponent.SubComponents):
+        pass
+
+    def _get_template_render_kwargs(self) -> dict:
+        context = super()._get_template_render_kwargs()
+        context["greeting"] = "Hello"
+        return context
+
 class TestHTMLComponent(unittest.TestCase):
     
     def _setup_hello(self):
@@ -154,6 +179,15 @@ class TestHTMLComponent(unittest.TestCase):
         self.assertEqual(context["extra"], "html")
         self.assertEqual(context["sc"], {})
         self.assertEqual(context["data"], {})
+
+    def test_005_html_component_can_extend_template_render_kwargs(self):
+        component = ExampleTemplateKwargsHTMLComponent()
+        component.inputs = component.Inputs(message="World")
+        component.subs = component.SubComponents()
+
+        rendered_html = component.render()
+
+        self.assertEqual(rendered_html, "<p>Hello World!</p>")
 
 
 class TestJSONComponent(unittest.TestCase):
