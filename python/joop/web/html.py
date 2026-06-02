@@ -159,15 +159,20 @@ class HTMLComponent(Component, HTML):
             self.render()
             return self._rendered_sc_html
 
-    def __init__(self, j_env: Optional[jinja2.Environment] = None, parent: Optional[Component] = None):
+    def __init__(
+            self,
+            j_env: Optional[jinja2.Environment] = None,
+            parent: Optional[Component] = None,
+            runtime: Optional[object] = None):
         """
         Initialize the HTMLComponent with a Jinja2 environment and an optional parent component.
 
         Args:
             j_env (Optional[jinja2.Environment]): The Jinja2 environment to use for rendering.
             parent (Optional[Component]): The parent component, if any.
+            runtime (Optional[object]): Optional ambient runtime context.
         """
-        super().__init__(parent=parent, j_env=j_env)  # Pass both arguments to super()
+        super().__init__(parent=parent, runtime=runtime, j_env=j_env)
 
     _loaded_template: jinja2.Template
     
@@ -179,6 +184,20 @@ class HTMLComponent(Component, HTML):
         stores it in the _loaded_template attribute.
         """
         self._loaded_template = self._get_template()
+
+    def _render_joop_context(self, joop_context: dict[str, object]) -> str:
+        """
+        Render a prepared joop context to HTML.
+
+        Subclasses may override this hook to integrate a different rendering
+        backend while preserving the standard ``joop`` template contract.
+        """
+        self._load_template()
+        render_kwargs = self._get_template_render_kwargs()
+        render_kwargs["joop"] = joop_context
+        return self._loaded_template.render(
+            **render_kwargs
+        )
 
     def _get_template_render_kwargs(self) -> dict:
         """
@@ -210,9 +229,6 @@ class HTMLComponent(Component, HTML):
         super().render()
         if as_subcomponent == True:
             self.subs = self.SubComponents()
-        self._load_template()
-        return self._loaded_template.render(
-            **self._get_template_render_kwargs()
-        )
+        return self._render_joop_context(self._get_joop_context())
 
     # render.__isabstractmethod__ = True

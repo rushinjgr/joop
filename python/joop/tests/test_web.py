@@ -96,6 +96,24 @@ class ExampleContextJSONComponent(ExampleJSONComponent):
         return context
 
 
+class ExampleRuntimeHTMLComponent(BaseTestHTMLComponent):
+    _template_location = "hello.html"
+
+    class Inputs(BaseTestHTMLComponent.Inputs):
+        pass
+
+    class Data(BaseTestHTMLComponent.Data):
+        @classmethod
+        def from_inputs(
+                cls,
+                inputs: "ExampleRuntimeHTMLComponent.Inputs",
+                ) -> "ExampleRuntimeHTMLComponent.Data":
+            return super()._from_inputs(inputs)
+
+    class SubComponents(BaseTestHTMLComponent.SubComponents):
+        pass
+
+
 class ExampleTemplateKwargsHTMLComponent(BaseTestHTMLComponent):
     _template_location = "hello_with_prefix.html"
 
@@ -188,6 +206,14 @@ class TestHTMLComponent(unittest.TestCase):
         rendered_html = component.render()
 
         self.assertEqual(rendered_html, "<p>Hello World!</p>")
+
+    def test_006_html_component_supports_runtime_inheritance(self):
+        runtime = object()
+        parent = ExampleRuntimeHTMLComponent(runtime=runtime)
+        child = ExampleRuntimeHTMLComponent(parent=parent)
+
+        self.assertIs(parent.runtime, runtime)
+        self.assertIs(child.runtime, runtime)
 
 
 class TestJSONComponent(unittest.TestCase):

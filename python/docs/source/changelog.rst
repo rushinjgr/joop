@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.1.3 (2026-06-01)
+--------------------------
+- Added runtime hook.
+
 Version 0.1.2 (2026-05-22)
 --------------------------
 - Additional hook for top level `joop` context overrides.

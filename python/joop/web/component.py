@@ -102,19 +102,43 @@ class Component(metaclass=ABCMeta):
     inputs: Inputs
     data: Data
     subs: SubComponents
+    runtime: Optional[object] = None
 
-    def __init__(self, parent: Optional['Component'] = None, *args, **kwargs):
+    def __init__(
+            self,
+            parent: Optional['Component'] = None,
+            runtime: Optional[object] = None,
+            *args,
+            **kwargs):
         """
         Initialize a Component instance.
 
         Args:
             parent (Optional[Component]): The parent component, if any.
+            runtime (Optional[object]): Optional ambient runtime context.
             *args: Additional positional arguments.
             **kwargs: Additional keyword arguments.
         """
         super().__init__(*args, **kwargs)  # Pass additional arguments to the next class in the MRO
         if parent is not None:
             self._parent = parent
+        self.runtime = self._init_runtime(parent=parent, runtime=runtime)
+
+    def _init_runtime(
+            self,
+            parent: Optional['Component'] = None,
+            runtime: Optional[object] = None) -> Optional[object]:
+        """
+        Initialize the ambient runtime context for this component.
+
+        If explicit runtime is not provided, inherit it from the parent
+        component when available.
+        """
+        if runtime is not None:
+            return runtime
+        if parent is not None:
+            return getattr(parent, "runtime", None)
+        return None
 
     def _process_inputs(self):
         """
