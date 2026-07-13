@@ -124,15 +124,15 @@ class MyHeartbeatRESTDataCatcher(RESTDataCatcher):
 
 class MyOutboundDataLink(OutBoundDataLink):
     datamodel = _HeartbeatModel
-    local_type = LocalOutboundDataCatcher
-    remote_type = MyHeartbeatRESTDataCatcher
+    local_datacatcher_type = LocalOutboundDataCatcher
+    remote_datacatcher_type = MyHeartbeatRESTDataCatcher
 ##########################
 
 ##########################
 # Create the heartbeat flow itself.
 class MyHeartbeat(Heartbeat):
     primary_outbound_data_link_type = MyOutboundDataLink
-    remote_type = _HeartbeatResponseModel
+    remote_flowmodel_type = _HeartbeatResponseModel
 
 
 my_heartbeat = MyHeartbeat(create_missing=True)

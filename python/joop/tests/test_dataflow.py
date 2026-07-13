@@ -380,8 +380,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = DataLink(
                 datamodel=_MyUUIDModel,
-                local_type=MyDataCatcher,
-                remote_type=MyOtherDataCatcher,
+                local_datacatcher_type=MyDataCatcher,
+                remote_datacatcher_type=MyOtherDataCatcher,
                 create_missing=True,
             )
 
@@ -446,8 +446,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = DataLink(
                 datamodel=_MyUUIDModel,
-                local_type=MyDataCatcher,
-                remote_type=MyOtherDataCatcher,
+                local_datacatcher_type=MyDataCatcher,
+                remote_datacatcher_type=MyOtherDataCatcher,
                 create_missing=True,
             )
 
@@ -482,8 +482,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = DataLink(
                 datamodel=_MyUUIDModel,
-                local_type=MyDataCatcher,
-                remote_type=MyOtherDataCatcher,
+                local_datacatcher_type=MyDataCatcher,
+                remote_datacatcher_type=MyOtherDataCatcher,
                 create_missing=True,
             )
 
@@ -521,8 +521,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = DataLink(
                 datamodel=_MyUUIDModel,
-                local_type=MyDataCatcher,
-                remote_type=MyOtherDataCatcher,
+                local_datacatcher_type=MyDataCatcher,
+                remote_datacatcher_type=MyOtherDataCatcher,
                 create_missing=True,
             )
 
@@ -545,8 +545,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = InboundDataLink(
                 datamodel=_MyInboundModel,
-                local_type=LocalInboundDataCatcher,
-                remote_type=RemoteInboundDataCatcher,
+                local_datacatcher_type=LocalInboundDataCatcher,
+                remote_datacatcher_type=RemoteInboundDataCatcher,
                 create_missing=True,
             )
 
@@ -587,8 +587,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = InboundDataLink(
                 datamodel=_MyInboundModel,
-                local_type=LocalInboundDataCatcher,
-                remote_type=RemoteInboundDataCatcher,
+                local_datacatcher_type=LocalInboundDataCatcher,
+                remote_datacatcher_type=RemoteInboundDataCatcher,
                 create_missing=True,
             )
 
@@ -621,8 +621,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = InboundDataLink(
                 datamodel=_MyInboundModel,
-                local_type=LocalInboundDataCatcher,
-                remote_type=RemoteInboundDataCatcher,
+                local_datacatcher_type=LocalInboundDataCatcher,
+                remote_datacatcher_type=RemoteInboundDataCatcher,
                 create_missing=True,
             )
 
@@ -646,8 +646,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = InboundDataLink(
                 datamodel=_MyInboundModel,
-                local_type=LocalInboundDataCatcher,
-                remote_type=RemoteInboundDataCatcher,
+                local_datacatcher_type=LocalInboundDataCatcher,
+                remote_datacatcher_type=RemoteInboundDataCatcher,
                 create_missing=True,
             )
 
@@ -681,12 +681,12 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             with self.assertRaisesRegex(
                     TypeError,
-                    "InboundDataLink requires a non-caching local_type",
+                    "InboundDataLink requires a non-caching local_datacatcher_type",
                     ):
                 InboundDataLink(
                     datamodel=_MyInboundModel,
-                    local_type=LocalInboundDataCatcher,
-                    remote_type=RemoteInboundDataCatcher,
+                    local_datacatcher_type=LocalInboundDataCatcher,
+                    remote_datacatcher_type=RemoteInboundDataCatcher,
                     create_missing=True,
                 )
 
@@ -703,7 +703,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             class MyArtificialDataLink(ArtificialDataLink):
                 datamodel = _MyInboundModel
-                local_type = LocalInboundDataCatcher
+                local_datacatcher_type = LocalInboundDataCatcher
 
             datalink = MyArtificialDataLink(create_missing=True)
             datalink.accept(_MyInboundModel(message="Accepted"))
@@ -728,12 +728,12 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             with self.assertRaisesRegex(
                     TypeError,
-                    "OutBoundDataLink requires a caching local_type",
+                    "OutBoundDataLink requires a caching local_datacatcher_type",
                     ):
                 OutBoundDataLink(
                     datamodel=_MyUUIDModel,
-                    local_type=LocalOutboundDataCatcher,
-                    remote_type=RemoteOutboundDataCatcher,
+                    local_datacatcher_type=LocalOutboundDataCatcher,
+                    remote_datacatcher_type=RemoteOutboundDataCatcher,
                     create_missing=True,
                 )
 
@@ -753,8 +753,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
@@ -793,8 +793,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
@@ -831,8 +831,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
@@ -864,14 +864,14 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
             with self.assertRaisesRegex(
                     RuntimeError,
-                    "OutBoundDataLink.exchange requires a round-trip remote_type",
+                    "OutBoundDataLink.exchange requires a round-trip remote_datacatcher_type",
                     ):
                 datalink.exchange(
                     _MyUUIDModel(message="Ping"),
@@ -903,8 +903,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
@@ -949,8 +949,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
@@ -994,8 +994,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
@@ -1037,8 +1037,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = OutBoundDataLink(
                 datamodel=_MyUUIDModel,
-                local_type=LocalOutboundDataCatcher,
-                remote_type=RemoteOutboundDataCatcher,
+                local_datacatcher_type=LocalOutboundDataCatcher,
+                remote_datacatcher_type=RemoteOutboundDataCatcher,
                 create_missing=True,
             )
 
@@ -1098,12 +1098,12 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             class MyInboundDataLink(ArtificialDataLink):
                 datamodel = _ResponseModel
-                local_type = LocalInboundDataCatcher
+                local_datacatcher_type = LocalInboundDataCatcher
 
             class MyOutboundDataLink(OutBoundDataLink):
                 datamodel = _HeartbeatModel
-                local_type = LocalOutboundDataCatcher
-                remote_type = RemoteOutboundDataCatcher
+                local_datacatcher_type = LocalOutboundDataCatcher
+                remote_datacatcher_type = RemoteOutboundDataCatcher
 
             class MyHeartbeat(Heartbeat):
                 primary_inbound_data_link_type = MyInboundDataLink
@@ -1151,8 +1151,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             datalink = DataLink(
                 datamodel=_MyUUIDModel,
-                local_type=MyDataCatcher,
-                remote_type=MyOtherDataCatcher,
+                local_datacatcher_type=MyDataCatcher,
+                remote_datacatcher_type=MyOtherDataCatcher,
                 create_missing=True,
             )
 
@@ -1206,14 +1206,14 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             successful_link = DataLink(
                 datamodel=_MyUUIDModel,
-                local_type=MyDataCatcher,
-                remote_type=SuccessfulRemoteDataCatcher,
+                local_datacatcher_type=MyDataCatcher,
+                remote_datacatcher_type=SuccessfulRemoteDataCatcher,
                 create_missing=True,
             )
             failing_link = DataLink(
                 datamodel=_MyUUIDModel,
-                local_type=AnotherDataCatcher,
-                remote_type=FailingRemoteDataCatcher,
+                local_datacatcher_type=AnotherDataCatcher,
+                remote_datacatcher_type=FailingRemoteDataCatcher,
                 create_missing=True,
             )
 
