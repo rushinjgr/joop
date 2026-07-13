@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.1.5 (2026-07-13)
+--------------------------
+- Added passthrough ``requests`` verify parameter for DataFlows.
+
 Version 0.1.4 (2026-07-13)
 --------------------------
 - Breaking DataFlow API change: renamed ``DataLink.local_type`` / ``remote_type`` to

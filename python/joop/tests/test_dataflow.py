@@ -219,10 +219,11 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 return None
 
         class FakeClient:
-            def post(self, url, json=None, headers=None):
+            def post(self, url, json=None, headers=None, verify=None):
                 self.url = url
                 self.json = json
                 self.headers = headers
+                self.verify = verify
                 return FakeResponse()
 
         MyRESTDataCatcher.set_primary_model(_MyUUIDModel)
@@ -234,12 +235,46 @@ class TestDataflowModelRegistration(unittest.TestCase):
         self.assertEqual(fake_client.url, "http://localhost/test")
         self.assertEqual(fake_client.headers["Content-Type"], "application/json")
         self.assertEqual(fake_client.json["message"], "Posted")
+        self.assertTrue(fake_client.verify)
+        self.assertEqual(returned_model.message, "Posted")
+
+    def test_rest_data_catcher_send_model_passes_verify_path(self):
+        class MyRESTDataCatcher(RESTDataCatcher):
+            url = "https://localhost/test"
+            verify = "/tmp/test-ca.pem"
+
+        class _MyUUIDModel(OutboundUUIDModel, table=False):
+            message: str = "Hello."
+
+        class FakeResponse:
+            text = ""
+
+            def raise_for_status(self):
+                return None
+
+        class FakeClient:
+            def post(self, url, json=None, headers=None, verify=None):
+                self.url = url
+                self.json = json
+                self.headers = headers
+                self.verify = verify
+                return FakeResponse()
+
+        MyRESTDataCatcher.set_primary_model(_MyUUIDModel)
+        model = _MyUUIDModel(message="Posted")
+
+        fake_client = FakeClient()
+        returned_model = MyRESTDataCatcher.send_model(model, client=fake_client)
+
+        self.assertEqual(fake_client.url, "https://localhost/test")
+        self.assertEqual(fake_client.verify, "/tmp/test-ca.pem")
         self.assertEqual(returned_model.message, "Posted")
 
     def test_rest_data_catcher_exchange_model_parses_json_response(self):
         class MyRESTDataCatcher(RESTDataCatcher):
             round_trip = True
             url = "http://localhost/heartbeat"
+            verify = False
 
         class _MyUUIDModel(OutboundUUIDModel, table=False):
             message: str = "Hello."
@@ -255,10 +290,11 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 return None
 
         class FakeClient:
-            def post(self, url, json=None, headers=None):
+            def post(self, url, json=None, headers=None, verify=None):
                 self.url = url
                 self.json = json
                 self.headers = headers
+                self.verify = verify
                 return FakeResponse()
 
         MyRESTDataCatcher.set_primary_model(_MyUUIDModel)
@@ -275,6 +311,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
         self.assertEqual(fake_client.headers["Content-Type"], "application/json")
         self.assertEqual(fake_client.headers["Accept"], "application/json")
         self.assertEqual(fake_client.json["message"], "Ping")
+        self.assertFalse(fake_client.verify)
         self.assertIsNotNone(response_model)
         self.assertEqual(response_model.message, "Reply to Ping")
 
