@@ -14,7 +14,7 @@
 -   HTML Components for server-side rendering.
 -   Declarative DataFlow module:
   -   Data model based.
-  -   Supports local caching of inbound & outbound data, especially via SQLite.
+  -   Supports caching & queueing, especially via SQLite.
   -   Supports fanout of outbound data to multiple sources of different varieties.
   -   Ideal for IoT use cases.
 

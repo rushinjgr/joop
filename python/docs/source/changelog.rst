@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.1.6 (2026-07-25)
+--------------------------
+- Breaking change. Big one. All caching data catchers have been renamed to queueing, and inbound data catchers now cache.
+
 Version 0.1.3 (2026-06-01)
 --------------------------
 - Added runtime hook.

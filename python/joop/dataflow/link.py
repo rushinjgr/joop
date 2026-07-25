@@ -8,13 +8,13 @@ class DataLink:
             DataCatcher. Local and remote terminology is used,
             based on the assumption that data flows downstream from
             the first catcher to the second, and that this is done
-            primarily for the purpose of caching locally, either to bulk
-            sends to a remote datastore or to provide caching (or buffering)
+            primarily for the purpose of queueing locally, either to bulk
+            sends to a remote datastore or to provide queueing (or buffering)
             during times when the remote is unavailable.'''
     datamodel: type[FlowModel] | None = None
     local_type: type[DataCatcher] | None = None
     remote_type: type[DataCatcher] | None = None
-    local_caching_required: bool | None = None
+    local_queueing_required: bool | None = None
     remote_required: bool = True
     local: DataCatcher
     remote: Optional[DataCatcher] = None
@@ -60,11 +60,11 @@ class DataLink:
             raise NotImplementedError(
                 "DataLink requires remote_type to be defined."
             )
-        if (self.local_caching_required is not None and
-                self.local_type.caching != self.local_caching_required):
-            caching_requirement = "a caching" if self.local_caching_required else "a non-caching"
+        if (self.local_queueing_required is not None and
+                self.local_type.queueing != self.local_queueing_required):
+            queueing_requirement = "a queueing" if self.local_queueing_required else "a non-queueing"
             raise TypeError(
-                f"{self.__class__.__name__} requires {caching_requirement} local_type DataCatcher."
+                f"{self.__class__.__name__} requires {queueing_requirement} local_type DataCatcher."
             )
     
     def _setup_datacatcher(self, data_catcher_type : Type[DataCatcher], create_missing : bool = False) -> DataCatcher:
@@ -75,7 +75,7 @@ class DataLink:
     def publish(self, model: FlowModel) -> FlowModel:
         """ Check the given model instance and then
                 attempt once to publish it to the remote.
-            If this fails, cache the model."""
+            If this fails, queue the model."""
         
         # TODO add a retry policy class and handle it here
 
@@ -87,7 +87,7 @@ class DataLink:
         try:
             return self.remote.send_model(model)
         except Exception:
-            return self.local.cache_model(model)
+            return self.local.queue_model(model)
 
     def get_latest_local(self) -> Optional[FlowModel]:
         """Return the latest locally stored primary model, if any."""
@@ -106,7 +106,7 @@ class InboundDataLink(DataLink):
     #local: Type[DataCatcher]
     #remote: Type[DataCatcher]
     datamodel : Type[InboundFlowModel]
-    local_caching_required = False
+    local_queueing_required = False
     current_model: Optional[InboundFlowModel] = None
 
     def _fetch(self) -> Optional[InboundFlowModel]:
@@ -190,7 +190,7 @@ class OutBoundDataLink(DataLink):
     #remote: DataCatcher
 
     datamodel : Type[PrimaryOutboundFlowModel]
-    local_caching_required = True
+    local_queueing_required = True
 
     def _queue(self, out):
         # In the case of either fallback
@@ -201,14 +201,14 @@ class OutBoundDataLink(DataLink):
             raise TypeError(
                 "OutBoundDataLink.queue only accepts models matching its datamodel type."
             )
-        return self.local.cache_model(out)
+        return self.local.queue_model(out)
 
     def queue(self, out):
         return self._queue(out)
 
     def get_queue_length(self):
         # get the number of queued outbound messages
-        return self.local.get_number_of_cached_records()
+        return self.local.get_number_of_queued_records()
     
     def publish(self, outbound_data : PrimaryOutboundFlowModel):
         # Attempt to _push an outbound datamodel.
@@ -243,7 +243,7 @@ class OutBoundDataLink(DataLink):
         except NotImplementedError:
             raise
         except Exception:
-            self.local.cache_model(outbound_data)
+            self.local.queue_model(outbound_data)
             return None
 
         if inbound_data is None:

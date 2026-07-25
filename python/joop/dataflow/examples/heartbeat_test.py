@@ -14,7 +14,7 @@ from joop.dataflow.flows.heartbeat import Heartbeat
 from joop.dataflow.http import RESTDataCatcher
 from joop.dataflow.link import OutBoundDataLink
 from joop.dataflow.model import InboundFlowModel, OutboundUUIDModel
-from joop.dataflow.sqlite import BasicSQLiteDataCatcher, SQLiteCacheDataCatcher
+from joop.dataflow.sqlite import CachingSQLiteDataCatcher, SQLiteQueueDataCatcher
 from joop.sql.sqlite import SQLiteDB
 from joop.web import JSONComponent
 
@@ -77,7 +77,7 @@ def heartbeat_endpoint():
     )
     response_component.subs = response_component.SubComponents()
 
-    if payload.get("cached_at") is not None:
+    if payload.get("queued_at") is not None:
         return ("", 204)
 
     rendered_data = json.loads(response_component.render())["data"]
@@ -89,11 +89,11 @@ def heartbeat_endpoint():
 
 ##########################
 # Create DataCatchers to control local state.
-class LocalInboundDataCatcher(BasicSQLiteDataCatcher):
+class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
     sql_config = inbound_sqlite_config
 
 
-class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
     sql_config = outbound_sqlite_config
 
 

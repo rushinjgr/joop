@@ -13,7 +13,7 @@ from joop.sql import ORMSQLConfig
 
 class DataCatcher(metaclass=ABCMeta):
     """Abstract datacatcher."""
-    caching: bool = False
+    queueing: bool = False
     round_trip: bool = False
 
     # ---
@@ -30,7 +30,7 @@ class DataCatcher(metaclass=ABCMeta):
     @classmethod
     def _get_registered_model_types(cls) -> tuple[type[FlowModel], ...]:
         """Return the model types currently registered on this catcher.
-            For example, an additonal model may be used to track cached records."""
+            For example, an additonal model may be used to track queued records."""
         raise NotImplementedError("Abstract; not implemented")
 
     _get_registered_model_types = AbstractMethod(_get_registered_model_types)
@@ -62,9 +62,9 @@ class DataCatcher(metaclass=ABCMeta):
     __init__ = AbstractMethod(__init__)
 
     @classmethod
-    def _assert_caching_enabled(cls) -> None:
-        """Ensure this catcher explicitly supports cache storage."""
-        assert cls.caching, f"{cls.__name__} does not support local caching."
+    def _assert_queueing_enabled(cls) -> None:
+        """Ensure this catcher explicitly supports queue storage."""
+        assert cls.queueing, f"{cls.__name__} does not support local queueing."
 
     @classmethod
     def send_model(cls, model: FlowModel):
@@ -74,11 +74,11 @@ class DataCatcher(metaclass=ABCMeta):
     send_model = AbstractMethod(send_model)
 
     @classmethod
-    def cache_model(cls, model: FlowModel):
-        """Persist a model locally when it must be buffered or cached."""
+    def queue_model(cls, model: FlowModel):
+        """Persist a model locally when it must be buffered or queued."""
         raise NotImplementedError("Abstract; not implemented")
 
-    cache_model = AbstractMethod(cache_model)
+    queue_model = AbstractMethod(queue_model)
 
     @classmethod
     def get_latest_model(cls) -> Optional[FlowModel]:
@@ -102,6 +102,13 @@ class DataCatcher(metaclass=ABCMeta):
     remove_queued_model = AbstractMethod(remove_queued_model)
 
     @classmethod
+    def get_number_of_queued_records(cls) -> int:
+        """Return how many queued outbound records this catcher currently has."""
+        raise NotImplementedError("Abstract; not implemented")
+
+    get_number_of_queued_records = AbstractMethod(get_number_of_queued_records)
+
+    @classmethod
     def exchange_model(
             cls,
             outbound_model: FlowModel,
@@ -115,7 +122,7 @@ class DataCatcher(metaclass=ABCMeta):
 
 class BasicSQLDataCatcher(DataCatcher):
     """A SQL Datacatcher maps a compatible FlowModel to a SQLConfig"""
-    caching: bool = False
+    queueing: bool = False
     round_trip: bool = False
     
     sql_config: ORMSQLConfig
@@ -302,8 +309,8 @@ class BasicSQLDataCatcher(DataCatcher):
         cls.primary_model_type = cls._bind_primary_model_type(primary_flow_model)
 
     @classmethod
-    def get_number_of_cached_records(cls) -> int:
-        """A basic SQL catcher does not maintain a cache table."""
+    def get_number_of_queued_records(cls) -> int:
+        """A basic SQL catcher does not maintain a queue table."""
         cls._get_registered_model_types()
         return 0
 
@@ -338,9 +345,9 @@ class BasicSQLDataCatcher(DataCatcher):
         return bound_model
 
     @classmethod
-    def cache_model(cls, model: FlowModel):
-        """Reject caching when this SQL catcher is configured as non-caching."""
-        cls._assert_caching_enabled()
+    def queue_model(cls, model: FlowModel):
+        """Reject queueing when this SQL catcher is configured as non-queueing."""
+        cls._assert_queueing_enabled()
         return cls.send_model(model)
 
     @classmethod
@@ -368,71 +375,71 @@ class BasicSQLDataCatcher(DataCatcher):
         return False
 
 
-class CachingSQLDataCatcher(BasicSQLDataCatcher):
+class QueueingSQLDataCatcher(BasicSQLDataCatcher):
     """A SQL Datacatcher maps a compatible FlowModel to a SQL DB
             via a SQLConfig.
-        A Caching SQL Data Catcher generates at least one
-            cache table to then track records that have been cached,
+        A Queueing SQL Data Catcher generates at least one
+            queue table to then track records that have been queued,
             especially in the sense that they will be sent to
             a different Data Catcher (SQL or otherwise)
             at a later time."""
-    caching: bool = True
+    queueing: bool = True
     round_trip: bool = False
 
     sql_config: ORMSQLConfig
 
     @classmethod
-    def _get_cache_model_names(
+    def _get_queue_model_names(
             cls,
             primary_model_type: type[FlowModel],
-            override_cache_table_class_name: Optional[str] = None,
-            override_cache_table_name: Optional[str] = None,
+            override_queue_table_class_name: Optional[str] = None,
+            override_queue_table_name: Optional[str] = None,
             ) -> tuple[str, str]:
-        """Return the generated class and table names for a cache model."""
-        if (override_cache_table_name is not None and
-                override_cache_table_class_name is not None):
+        """Return the generated class and table names for a queue model."""
+        if (override_queue_table_name is not None and
+                override_queue_table_class_name is not None):
             return (
-                override_cache_table_class_name,
-                override_cache_table_name,
+                override_queue_table_class_name,
+                override_queue_table_name,
             )
 
         abstract_model_type = getattr(cls, "abstract_model_type", primary_model_type)
         return (
-            abstract_model_type.get_cache_model_class_name(
+            abstract_model_type.get_queue_model_class_name(
                 data_catcher_type=cls,
                 namespace=cls._get_model_namespace(),
             ),
-            abstract_model_type.get_cache_model_table_name(
+            abstract_model_type.get_queue_model_table_name(
                 data_catcher_type=cls,
             ),
         )
 
     @classmethod
     def _get_registered_model_types(cls) -> tuple[type[FlowModel], ...]:
-        """ Check that we've got a primary and a cache model and return them."""
+        """Check that we've got a primary and a queue model and return them."""
         primary_model_type = getattr(cls, "primary_model_type", None)
-        cache_model_type = getattr(cls, "cache_model_type", None)
+        queue_model_type = getattr(cls, "queue_model_type", None)
 
-        if primary_model_type is None or cache_model_type is None:
+        if primary_model_type is None or queue_model_type is None:
             raise RuntimeError("Primary model must be registered before use.")
 
-        return (primary_model_type, cache_model_type)
+        return (primary_model_type, queue_model_type)
         
     @classmethod
     def set_primary_model(cls,
             primary_flow_model : type[FlowModel],
-            override_cache_table_class_name : Optional[str] = None,
-            override_cache_table_name : Optional[str] = None,
+            override_queue_table_class_name : Optional[str] = None,
+            override_queue_table_name : Optional[str] = None,
             ):
-        """Generate a model for the cache table. This will be a thin model,
-                not containing all of the data of cached models, but just their
+        """Generate a model for the queue table. This will be a thin model,
+                not containing all of the data of queued models, but just their
                 primary keys and other necessary information. It's a kind of meta table.
-            Then, link the primary to the cache model as well.
+            Then, link the primary to the queue model as well.
         """
         primary_model_type = getattr(cls, "primary_model_type", None)
         abstract_model_type = getattr(cls, "abstract_model_type", None)
-        cache_model_type = getattr(cls, "cache_model_type", None)
-        if cache_model_type is not None:
+        queue_model_type = getattr(cls, "queue_model_type", None)
+        if queue_model_type is not None:
             if primary_flow_model in (primary_model_type, abstract_model_type):
                 return
             raise RuntimeError("Primary model already registered on this catcher.")
@@ -441,26 +448,26 @@ class CachingSQLDataCatcher(BasicSQLDataCatcher):
         abstract_model_type = cls.abstract_model_type
 
         base_model = cls.get_base_model()
-        CacheDef = cls.primary_model_type.get_cache_model_base()
-        cache_table_class_name, cache_table_name = cls._get_cache_model_names(
+        QueueDef = cls.primary_model_type.get_queue_model_base()
+        queue_table_class_name, queue_table_name = cls._get_queue_model_names(
             cls.primary_model_type,
-            override_cache_table_class_name=override_cache_table_class_name,
-            override_cache_table_name=override_cache_table_name,
+            override_queue_table_class_name=override_queue_table_class_name,
+            override_queue_table_name=override_queue_table_name,
         )
 
         # defining the model as inheriting from base
         #   adds it to our ORM automatically :)
-        flow_model_cache = cls._build_model_type(
-            class_name=cache_table_class_name,
-            model_bases=(base_model, CacheDef),
+        flow_model_queue = cls._build_model_type(
+            class_name=queue_table_class_name,
+            model_bases=(base_model, QueueDef),
             module_name=cls.primary_model_type.__module__,
-            table_name=cache_table_name,
+            table_name=queue_table_name,
         )
 
-        cls.cache_model_type = flow_model_cache
-        cls.primary_model_type.set_cache_model(flow_model_cache, data_catcher_type=cls)
+        cls.queue_model_type = flow_model_queue
+        cls.primary_model_type.set_queue_model(flow_model_queue, data_catcher_type=cls)
         if abstract_model_type is not cls.primary_model_type:
-            abstract_model_type.set_cache_model(flow_model_cache, data_catcher_type=cls)
+            abstract_model_type.set_queue_model(flow_model_queue, data_catcher_type=cls)
 
     @classmethod
     def send_model(cls, model: FlowModel):
@@ -473,34 +480,36 @@ class CachingSQLDataCatcher(BasicSQLDataCatcher):
             bound_model = cls._coerce_to_primary_model(model)
 
         with Session(cls._get_engine()) as session:
-            session.add(bound_model)
+            # Unlike add, merge does not make an object persist in a session
+            #   so we copy the return
+            bound_model = session.merge(bound_model)
             session.commit()
             session.refresh(bound_model)
 
         return bound_model
 
     @classmethod
-    def cache_model(cls, model: PrimaryOutboundFlowModel):
-        """Store the primary model and a cache row for fallback bookkeeping."""
-        cls._assert_caching_enabled()
-        if isinstance(model, cls.cache_model_type):
+    def queue_model(cls, model: PrimaryOutboundFlowModel):
+        """Store the primary model and a queue row for fallback bookkeeping."""
+        cls._assert_queueing_enabled()
+        if isinstance(model, cls.queue_model_type):
             return cls.send_model(model)
 
-        model.cached_at = datetime.now(timezone.utc)
+        model.queued_at = datetime.now(timezone.utc)
         local_model = BasicSQLDataCatcher.send_model.__func__(cls, model)
-        cache_model = cls.cache_model_type.model_validate(model)
-        cls.send_model(cache_model)
+        queue_model = cls.queue_model_type.model_validate(model)
+        cls.send_model(queue_model)
         return local_model
 
     @classmethod
-    def get_number_of_cached_records(cls) -> int:
-        """Return the total number of queued cache rows."""
+    def get_number_of_queued_records(cls) -> int:
+        """Return the total number of queued bookkeeping rows."""
         cls._get_registered_model_types()
 
         with Session(cls._get_engine()) as session:
-            cached_rows = session.exec(select(cls.cache_model_type)).all()
+            queued_rows = session.exec(select(cls.queue_model_type)).all()
 
-        return len(cached_rows)
+        return len(queued_rows)
 
     @classmethod
     def get_number_of_primary_records(cls) -> int:
@@ -509,25 +518,25 @@ class CachingSQLDataCatcher(BasicSQLDataCatcher):
 
     @classmethod
     def iter_queued_models(cls) -> Iterator[FlowModel]:
-        """Yield queued primary models in cache timestamp order.
+        """Yield queued primary models in queue timestamp order.
 
-        Orphaned cache rows are deliberately dropped here instead of raising,
+        Orphaned queue rows are deliberately dropped here instead of raising,
         so replay can continue past stale queue metadata.
         """
         cls._get_registered_model_types()
 
         with Session(cls._get_engine()) as session:
-            cache_statement = select(cls.cache_model_type).order_by(
-                cls.cache_model_type.cached_at.asc()
+            queue_statement = select(cls.queue_model_type).order_by(
+                cls.queue_model_type.queued_at.asc()
             )
-            cache_rows = list(session.exec(cache_statement).all())
+            queue_rows = list(session.exec(queue_statement).all())
             queued_models = []
             removed_orphans = False
 
-            for cache_row in cache_rows:
-                primary_model = session.get(cls.primary_model_type, cache_row.id)
+            for queue_row in queue_rows:
+                primary_model = session.get(cls.primary_model_type, queue_row.id)
                 if primary_model is None:
-                    session.delete(cache_row)
+                    session.delete(queue_row)
                     removed_orphans = True
                     continue
                 queued_models.append(primary_model)
@@ -539,16 +548,32 @@ class CachingSQLDataCatcher(BasicSQLDataCatcher):
 
     @classmethod
     def remove_queued_model(cls, model: FlowModel) -> bool:
-        """Remove the queued cache row for the given model, if present."""
+        """Remove the queued row for the given model, if present."""
         cls._get_registered_model_types()
         bound_model = cls._coerce_to_primary_model(model)
 
         with Session(cls._get_engine()) as session:
-            cache_row = session.get(cls.cache_model_type, bound_model.id)
-            if cache_row is None:
+            queue_row = session.get(cls.queue_model_type, bound_model.id)
+            if queue_row is None:
                 return False
 
-            session.delete(cache_row)
+            session.delete(queue_row)
             session.commit()
 
         return True
+
+
+class CachingSQLDataCatcher(BasicSQLDataCatcher):
+    """A non-queueing SQL catcher that keeps the latest inbound row by PK."""
+
+    @classmethod
+    def send_model(cls, model: FlowModel):
+        """Store inbound data with upsert semantics against the primary table."""
+        bound_model = cls._coerce_to_primary_model(model)
+
+        with Session(cls._get_engine()) as session:
+            bound_model = session.merge(bound_model)
+            session.commit()
+            session.refresh(bound_model)
+
+        return bound_model

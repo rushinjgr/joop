@@ -17,7 +17,7 @@ class RESTDataCatcher(DataCatcher):
     model type directly and leave transport-specific behavior to subclasses.
     """
 
-    caching: bool = False
+    queueing: bool = False
     round_trip: bool = False
     url: str | None = None
 
@@ -168,6 +168,12 @@ class RESTDataCatcher(DataCatcher):
         cls._get_registered_model_types()
         return 0
 
+    @classmethod
+    def get_number_of_queued_records(cls) -> int:
+        """REST catchers do not maintain a local replay queue."""
+        cls._get_registered_model_types()
+        return 0
+
     def __init__(self, *args, **kwargs):
         """REST catchers require only endpoint configuration by default."""
         self._get_url()
@@ -192,17 +198,17 @@ class RESTDataCatcher(DataCatcher):
         return cls._parse_send_response(response_body, model)
 
     @classmethod
-    def cache_model(cls, model: FlowModel):
-        """REST catchers do not provide local cache storage."""
-        cls._assert_caching_enabled()
+    def queue_model(cls, model: FlowModel):
+        """REST catchers do not provide local queue storage."""
+        cls._assert_queueing_enabled()
         cls._get_registered_model_types()
         if not isinstance(model, cls.primary_model_type):
             raise TypeError(
-                "RESTDataCatcher.cache_model only accepts the registered "
+                "RESTDataCatcher.queue_model only accepts the registered "
                 "primary model type."
             )
         raise AssertionError(
-            f"{cls.__name__} does not support local caching."
+            f"{cls.__name__} does not support local queueing."
         )
 
     @classmethod

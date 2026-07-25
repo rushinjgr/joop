@@ -1,10 +1,9 @@
-""" To support a DataFlow, a model must be defined from
-        a type in this module.
-    While these models are relatively primitive,
-        they provide features necessary for a DatFlow
-            (ex. primary keying (that stays the same
-                between a local cache and remote)).
-    Tracking of DataFlow specific metadata is also implemented here.
+"""To support a DataFlow, a model must be defined from a type in this module.
+
+While these models are relatively primitive, they provide features necessary
+for a DataFlow, such as primary keying that stays the same between a local
+queue and a remote store. Tracking of DataFlow-specific metadata is also
+implemented here.
 """
 
 from datetime import datetime, timezone
@@ -57,47 +56,47 @@ class FlowModel(JoopModel, table=False):
         return cls.get_primary_model_table_name()
 
     @classmethod
-    def get_cache_model_name(
+    def get_queue_model_name(
             cls,
             data_catcher_type: type[object] | None = None,
             ) -> str:
-        """Return the canonical cache-model name for this flow model family."""
+        """Return the canonical queue-model name for this flow model family."""
         model_name = cls.get_primary_model_name()
         if data_catcher_type is not None:
             return f"{data_catcher_type.__name__}{model_name}"
         return model_name
 
     @classmethod
-    def get_cache_model_class_name(
+    def get_queue_model_class_name(
             cls,
             data_catcher_type: type[object] | None = None,
             namespace: str | None = None,
             ) -> str:
-        """Return the cache model class name for this flow model family."""
-        model_name = cls.get_cache_model_name(data_catcher_type=data_catcher_type)
+        """Return the queue model class name for this flow model family."""
+        model_name = cls.get_queue_model_name(data_catcher_type=data_catcher_type)
 
         if namespace is not None and namespace != "":
-            return f"{namespace}_{model_name}Cache"
-        return f"{model_name}Cache"
+            return f"{namespace}_{model_name}Queue"
+        return f"{model_name}Queue"
 
     @classmethod
-    def get_cache_model_table_name(
+    def get_queue_model_table_name(
             cls,
             data_catcher_type: type[object] | None = None,
             ) -> str:
-        """Return the table name for this model family's cache records."""
-        model_name = cls.get_cache_model_name(data_catcher_type=data_catcher_type)
-        return f"{model_name.lower()}_cache"
+        """Return the table name for this model family's queue records."""
+        model_name = cls.get_queue_model_name(data_catcher_type=data_catcher_type)
+        return f"{model_name.lower()}_queue"
 
     @classmethod
-    def get_cache_model(
+    def get_queue_model(
             cls,
             data_catcher_type: type[object] | None = None,
             ) -> Type["FlowModel"]:
         raise NotImplementedError(f"Use a child class.")
 
     @classmethod
-    def get_cache_model_base(cls) -> Type["FlowModel"]:
+    def get_queue_model_base(cls) -> Type["FlowModel"]:
         raise NotImplementedError(f"Use a child class.")
 
 class PrimaryFlowModel(FlowModel, table=False):
@@ -113,7 +112,7 @@ class InboundFlowModel(PrimaryFlowModel, table=False):
     """Primary-only flow model for inbound data.
 
     Inbound records are persisted directly and reused as fallback state;
-    unlike outbound records, they do not imply queue/cache companion tables.
+    unlike outbound records, they do not imply queue companion tables.
     """
 
     __abstract__ = True
@@ -122,83 +121,81 @@ class InboundFlowModel(PrimaryFlowModel, table=False):
     source_timestamp: Optional[datetime] = None
 
 class PrimaryOutboundFlowModel(PrimaryFlowModel, table=False):
-    """ Model-level structure for outbound caching."""
+    """Model-level structure for outbound queueing."""
     
     __abstract__ = True
-    cached_at: Optional[datetime] = None # This means it's not cached
-    _cache_model: ClassVar[Type["FlowModelCache"]]
-    _cache_model_types: ClassVar[dict[type[object], Type["FlowModelCache"]]]
-    _cache_model_base: ClassVar[Type["FlowModelCache"]]
+    queued_at: Optional[datetime] = None
+    _queue_model: ClassVar[Type["FlowModelQueue"]]
+    _queue_model_types: ClassVar[dict[type[object], Type["FlowModelQueue"]]]
+    _queue_model_base: ClassVar[Type["FlowModelQueue"]]
 
     @classmethod
-    def set_cache_model(
+    def set_queue_model(
             cls,
-            cache_model: Type["FlowModelCache"],
+            queue_model: Type["FlowModelQueue"],
             data_catcher_type: type[object] | None = None,
             ) -> None:
-        """Register a cache model for this flow model family."""
+        """Register a queue model for this flow model family."""
         if data_catcher_type is None:
-            cls._cache_model = cache_model
+            cls._queue_model = queue_model
             return
 
-        cache_model_types = cls.__dict__.get("_cache_model_types")
-        if cache_model_types is None:
-            inherited_cache_model_types = getattr(cls, "_cache_model_types", {})
-            cache_model_types = dict(inherited_cache_model_types)
-            cls._cache_model_types = cache_model_types
+        queue_model_types = cls.__dict__.get("_queue_model_types")
+        if queue_model_types is None:
+            inherited_queue_model_types = getattr(cls, "_queue_model_types", {})
+            queue_model_types = dict(inherited_queue_model_types)
+            cls._queue_model_types = queue_model_types
 
-        cache_model_types[data_catcher_type] = cache_model
-        if len(cache_model_types) == 1:
-            cls._cache_model = cache_model
+        queue_model_types[data_catcher_type] = queue_model
+        if len(queue_model_types) == 1:
+            cls._queue_model = queue_model
 
     @classmethod
-    def get_cache_model(
+    def get_queue_model(
             cls,
             data_catcher_type: type[object] | None = None,
-            ) -> Type["FlowModelCache"]:
+            ) -> Type["FlowModelQueue"]:
         if data_catcher_type is not None:
-            cache_model_types = getattr(cls, "_cache_model_types", {})
-            if data_catcher_type not in cache_model_types:
+            queue_model_types = getattr(cls, "_queue_model_types", {})
+            if data_catcher_type not in queue_model_types:
                 raise RuntimeError(
-                    f"No cache model is registered for {cls.__name__} on "
+                    f"No queue model is registered for {cls.__name__} on "
                     f"{data_catcher_type.__name__}."
                 )
-            return cache_model_types[data_catcher_type]
+            return queue_model_types[data_catcher_type]
 
-        cache_model_types = getattr(cls, "_cache_model_types", {})
-        if len(cache_model_types) == 1:
-            return next(iter(cache_model_types.values()))
-        if len(cache_model_types) > 1:
+        queue_model_types = getattr(cls, "_queue_model_types", {})
+        if len(queue_model_types) == 1:
+            return next(iter(queue_model_types.values()))
+        if len(queue_model_types) > 1:
             raise RuntimeError(
-                f"Multiple cache models are registered for {cls.__name__}; "
+                f"Multiple queue models are registered for {cls.__name__}; "
                 "provide data_catcher_type to disambiguate."
             )
-        return cls._cache_model
+        return cls._queue_model
 
     @classmethod
-    def get_cache_model_base(cls) -> Type["FlowModelCache"]:
-        return cls._cache_model_base
+    def get_queue_model_base(cls) -> Type["FlowModelQueue"]:
+        return cls._queue_model_base
 
-class OutboundCacheReason(str, Enum):
-    FAIL = "fail" # we tried to send the model live but it failed so we cached
-    BUFFER = "buffer" # the model was buffered on purpose for another reason
+class OutboundQueueReason(str, Enum):
+    FAIL = "fail"
+    BUFFER = "buffer"
 
-class CacheStatus(str, Enum):
-    # just a placeholder for now
+class QueueStatus(str, Enum):
     PLACEHOLDER = ""
 
-class FlowModelCache(FlowModel, table=False):
-    """ A base model for cache models, so truncated tables
-            with metadata for cached data can be defined."""
+class FlowModelQueue(FlowModel, table=False):
+    """A base model for queue models with outbound bookkeeping metadata."""
     __abstract__ = True
-    cached_at: Optional[datetime] = Field(
+    queued_at: Optional[datetime] = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
-    cache_reason : OutboundCacheReason = Field(default=OutboundCacheReason.FAIL)
-    cache_status : CacheStatus = Field(default=CacheStatus.PLACEHOLDER)
+    queue_reason : OutboundQueueReason = Field(default=OutboundQueueReason.FAIL)
+    queue_status : QueueStatus = Field(default=QueueStatus.PLACEHOLDER)
 
-class OutboundUUIDFlowModelCache(FlowModelCache):
-    """Caching for models keyed by a UUID primary key."""
+class OutboundUUIDFlowModelQueue(FlowModelQueue):
+    """Queue bookkeeping for models keyed by a UUID primary key."""
     __abstract__ = True
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
@@ -206,5 +203,5 @@ class OutboundUUIDModel(PrimaryOutboundFlowModel):
     """Use this to make your own UUID-keyed models!"""
     __abstract__ = True
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    _cache_model_base: ClassVar[Type[FlowModelCache]] = OutboundUUIDFlowModelCache
-    _cache_model: ClassVar[Type[FlowModelCache]] = OutboundUUIDFlowModelCache
+    _queue_model_base: ClassVar[Type[FlowModelQueue]] = OutboundUUIDFlowModelQueue
+    _queue_model: ClassVar[Type[FlowModelQueue]] = OutboundUUIDFlowModelQueue

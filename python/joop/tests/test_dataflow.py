@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from sqlmodel import Field, Session, select
 
-from joop.dataflow import SQLiteCacheDataCatcher
+from joop.dataflow import SQLiteQueueDataCatcher
 from joop.dataflow.flows.heartbeat import Heartbeat
 from joop.dataflow.http import RESTDataCatcher
 from joop.dataflow.link import (
@@ -19,11 +19,11 @@ from joop.dataflow.link import (
 )
 from joop.dataflow.model import (
     InboundFlowModel,
-    OutboundCacheReason,
-    OutboundUUIDFlowModelCache,
+    OutboundQueueReason,
+    OutboundUUIDFlowModelQueue,
     OutboundUUIDModel,
 )
-from joop.dataflow.sqlite import BasicSQLiteDataCatcher
+from joop.dataflow.sqlite import BasicSQLiteDataCatcher, CachingSQLiteDataCatcher
 from joop.sql.sqlite import SQLiteDB
 
 
@@ -31,7 +31,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
     def _build_registered_catcher(self, db_path: str):
         sqlite_config = SQLiteDB.from_path(db_path)
 
-        class MyDataCatcher(SQLiteCacheDataCatcher):
+        class MyDataCatcher(SQLiteQueueDataCatcher):
             sql_config = sqlite_config
 
         base_model = MyDataCatcher.get_base_model()
@@ -43,27 +43,27 @@ class TestDataflowModelRegistration(unittest.TestCase):
         MyDataCatcher(create_missing=True)
         return sqlite_config, MyDataCatcher, MyUUIDModel
 
-    def test_primary_model_registration_binds_concrete_cache_model(self):
+    def test_primary_model_registration_binds_concrete_queue_model(self):
         with TemporaryDirectory() as temp_dir:
             _, MyDataCatcher, MyUUIDModel = self._build_registered_catcher(
                 str(Path(temp_dir) / "registration.sqlite")
             )
 
-            cache_model = MyUUIDModel.get_cache_model()
+            queue_model = MyUUIDModel.get_queue_model()
 
             self.assertIs(MyDataCatcher.primary_model_type, MyUUIDModel)
-            self.assertIs(MyDataCatcher.cache_model_type, cache_model)
-            self.assertIsNot(cache_model, OutboundUUIDFlowModelCache)
-            self.assertEqual(cache_model.__tablename__, "mydatacatchermyuuidmodel_cache")
+            self.assertIs(MyDataCatcher.queue_model_type, queue_model)
+            self.assertIsNot(queue_model, OutboundUUIDFlowModelQueue)
+            self.assertEqual(queue_model.__tablename__, "mydatacatchermyuuidmodel_queue")
 
-    def test_shared_config_reuses_primary_model_and_isolates_cache_models(self):
+    def test_shared_config_reuses_primary_model_and_isolates_queue_models(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "shared.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class MyOtherDataCatcher(SQLiteCacheDataCatcher):
+            class MyOtherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -79,36 +79,36 @@ class TestDataflowModelRegistration(unittest.TestCase):
             self.assertEqual(MyDataCatcher.primary_model_type.__name__, "MyUUIDModel")
             self.assertEqual(MyDataCatcher.primary_model_type.__tablename__, "myuuidmodel")
             self.assertIsNot(
-                MyDataCatcher.cache_model_type,
-                MyOtherDataCatcher.cache_model_type,
+                MyDataCatcher.queue_model_type,
+                MyOtherDataCatcher.queue_model_type,
             )
             self.assertEqual(
-                MyDataCatcher.cache_model_type.__tablename__,
-                "mydatacatchermyuuidmodel_cache",
+                MyDataCatcher.queue_model_type.__tablename__,
+                "mydatacatchermyuuidmodel_queue",
             )
             self.assertEqual(
-                MyOtherDataCatcher.cache_model_type.__tablename__,
-                "myotherdatacatchermyuuidmodel_cache",
+                MyOtherDataCatcher.queue_model_type.__tablename__,
+                "myotherdatacatchermyuuidmodel_queue",
             )
             self.assertIs(
-                _MyUUIDModel.get_cache_model(MyDataCatcher),
-                MyDataCatcher.cache_model_type,
+                _MyUUIDModel.get_queue_model(MyDataCatcher),
+                MyDataCatcher.queue_model_type,
             )
             self.assertIs(
-                _MyUUIDModel.get_cache_model(MyOtherDataCatcher),
-                MyOtherDataCatcher.cache_model_type,
+                _MyUUIDModel.get_queue_model(MyOtherDataCatcher),
+                MyOtherDataCatcher.queue_model_type,
             )
             with self.assertRaises(RuntimeError):
-                MyDataCatcher.primary_model_type.get_cache_model()
+                MyDataCatcher.primary_model_type.get_queue_model()
 
     def test_concrete_primary_model_is_reused_across_catchers_sharing_config(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "concrete.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class MyOtherDataCatcher(SQLiteCacheDataCatcher):
+            class MyOtherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
             base_model = MyDataCatcher.get_base_model()
@@ -127,7 +127,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "named.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
             class _NamedUUIDModel(OutboundUUIDModel, table=False):
@@ -146,13 +146,13 @@ class TestDataflowModelRegistration(unittest.TestCase):
                     return "shared_named_records"
 
                 @classmethod
-                def get_cache_model_name(cls, data_catcher_type=None):
+                def get_queue_model_name(cls, data_catcher_type=None):
                     if data_catcher_type is None:
                         return "SharedNamedBuffer"
                     return f"{data_catcher_type.__name__}SharedNamedBuffer"
 
                 @classmethod
-                def get_cache_model_class_name(
+                def get_queue_model_class_name(
                         cls,
                         data_catcher_type=None,
                         namespace=None,
@@ -161,14 +161,14 @@ class TestDataflowModelRegistration(unittest.TestCase):
                     if namespace is not None and namespace != "":
                         prefix = f"{namespace}_"
                     return (
-                        f"{prefix}{cls.get_cache_model_name(data_catcher_type=data_catcher_type)}"
+                        f"{prefix}{cls.get_queue_model_name(data_catcher_type=data_catcher_type)}"
                         "Store"
                     )
 
                 @classmethod
-                def get_cache_model_table_name(cls, data_catcher_type=None):
-                    cache_name = cls.get_cache_model_name(data_catcher_type=data_catcher_type)
-                    return f"{cache_name.lower()}_buffer"
+                def get_queue_model_table_name(cls, data_catcher_type=None):
+                    queue_name = cls.get_queue_model_name(data_catcher_type=data_catcher_type)
+                    return f"{queue_name.lower()}_buffer"
 
             MyDataCatcher.set_primary_model(_NamedUUIDModel)
 
@@ -181,11 +181,11 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 "shared_named_records",
             )
             self.assertEqual(
-                MyDataCatcher.cache_model_type.__name__,
+                MyDataCatcher.queue_model_type.__name__,
                 "sqlite_MyDataCatcherSharedNamedBufferStore",
             )
             self.assertEqual(
-                MyDataCatcher.cache_model_type.__tablename__,
+                MyDataCatcher.queue_model_type.__tablename__,
                 "mydatacatchersharednamedbuffer_buffer",
             )
 
@@ -292,33 +292,33 @@ class TestDataflowModelRegistration(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0].message, "Saved")
 
-    def test_get_number_of_cached_records_counts_registered_cache_rows(self):
+    def test_get_number_of_queued_records_counts_registered_queue_rows(self):
         with TemporaryDirectory() as temp_dir:
             _, MyDataCatcher, MyUUIDModel = self._build_registered_catcher(
-                str(Path(temp_dir) / "cache.sqlite")
+                str(Path(temp_dir) / "queue.sqlite")
             )
 
-            cache_model = MyUUIDModel.get_cache_model()
-            MyDataCatcher.send_model(cache_model())
-            MyDataCatcher.send_model(cache_model())
+            queue_model = MyUUIDModel.get_queue_model()
+            MyDataCatcher.send_model(queue_model())
+            MyDataCatcher.send_model(queue_model())
 
-            self.assertEqual(MyDataCatcher.get_number_of_cached_records(), 2)
+            self.assertEqual(MyDataCatcher.get_number_of_queued_records(), 2)
 
-    def test_cache_model_marks_primary_row_as_cached(self):
+    def test_queue_model_marks_primary_row_as_queued(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config, MyDataCatcher, MyUUIDModel = self._build_registered_catcher(
-                str(Path(temp_dir) / "primary_cached.sqlite")
+                str(Path(temp_dir) / "primary_queued.sqlite")
             )
 
-            MyDataCatcher.cache_model(MyUUIDModel(message="Buffered"))
+            MyDataCatcher.queue_model(MyUUIDModel(message="Buffered"))
 
             with Session(sqlite_config.get_engine()) as session:
                 primary_rows = list(session.exec(select(MyUUIDModel)).all())
 
             self.assertEqual(len(primary_rows), 1)
-            self.assertIsNotNone(primary_rows[0].cached_at)
+            self.assertIsNotNone(primary_rows[0].queued_at)
 
-    def test_primary_and_cached_record_counts_are_tracked_separately(self):
+    def test_primary_and_queued_record_counts_are_tracked_separately(self):
         with TemporaryDirectory() as temp_dir:
             _, MyDataCatcher, MyUUIDModel = self._build_registered_catcher(
                 str(Path(temp_dir) / "counts.sqlite")
@@ -327,28 +327,28 @@ class TestDataflowModelRegistration(unittest.TestCase):
             MyDataCatcher.send_model(MyUUIDModel(message="First"))
             MyDataCatcher.send_model(MyUUIDModel(message="Second"))
 
-            cache_model = MyUUIDModel.get_cache_model()
-            MyDataCatcher.send_model(cache_model())
+            queue_model = MyUUIDModel.get_queue_model()
+            MyDataCatcher.send_model(queue_model())
 
             self.assertEqual(MyDataCatcher.get_number_of_primary_records(), 2)
-            self.assertEqual(MyDataCatcher.get_number_of_cached_records(), 1)
+            self.assertEqual(MyDataCatcher.get_number_of_queued_records(), 1)
 
-    def test_cache_model_defaults_to_timezone_aware_timestamp(self):
+    def test_queue_model_defaults_to_timezone_aware_timestamp(self):
         with TemporaryDirectory() as temp_dir:
             _, _, MyUUIDModel = self._build_registered_catcher(
                 str(Path(temp_dir) / "timestamp.sqlite")
             )
 
-            cache_instance = MyUUIDModel.get_cache_model()()
+            queue_instance = MyUUIDModel.get_queue_model()()
 
-            self.assertIsNotNone(cache_instance.cached_at)
-            self.assertIsNotNone(cache_instance.cached_at.tzinfo)
+            self.assertIsNotNone(queue_instance.queued_at)
+            self.assertIsNotNone(queue_instance.queued_at.tzinfo)
 
     def test_send_model_accepts_bound_abstract_model(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "abstract_send.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -369,10 +369,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class MyOtherDataCatcher(SQLiteCacheDataCatcher):
+            class MyOtherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -407,7 +407,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "ambiguous.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -435,10 +435,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class MyOtherDataCatcher(SQLiteCacheDataCatcher):
+            class MyOtherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -471,10 +471,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class MyOtherDataCatcher(SQLiteCacheDataCatcher):
+            class MyOtherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -510,10 +510,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class MyOtherDataCatcher(SQLiteCacheDataCatcher):
+            class MyOtherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -533,7 +533,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalInboundDataCatcher(BasicSQLiteDataCatcher):
+            class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
                 sql_config = sqlite_config
 
             class RemoteInboundDataCatcher(BasicSQLiteDataCatcher):
@@ -571,7 +571,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalInboundDataCatcher(BasicSQLiteDataCatcher):
+            class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
                 sql_config = sqlite_config
 
             class RemoteInboundDataCatcher(BasicSQLiteDataCatcher):
@@ -609,7 +609,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalInboundDataCatcher(BasicSQLiteDataCatcher):
+            class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
                 sql_config = sqlite_config
 
             class RemoteInboundDataCatcher(BasicSQLiteDataCatcher):
@@ -634,7 +634,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalInboundDataCatcher(BasicSQLiteDataCatcher):
+            class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
                 sql_config = sqlite_config
 
             class RemoteInboundDataCatcher(BasicSQLiteDataCatcher):
@@ -664,12 +664,50 @@ class TestDataflowModelRegistration(unittest.TestCase):
             self.assertIsNotNone(datalink.current_model)
             self.assertEqual(datalink.current_model.message, "Returned")
 
-    def test_inbound_datalink_requires_non_caching_local_catcher(self):
+    def test_inbound_datalink_accept_updates_existing_primary_key_locally(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalInboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
+                sql_config = sqlite_config
+
+            class RemoteInboundDataCatcher(BasicSQLiteDataCatcher):
+                sql_config = other_sqlite_config
+
+            class _MyInboundModel(InboundFlowModel, table=False):
+                id: int | None = Field(default=None, primary_key=True)
+                message: str = "Hello."
+
+            datalink = InboundDataLink(
+                datamodel=_MyInboundModel,
+                local_type=LocalInboundDataCatcher,
+                remote_type=RemoteInboundDataCatcher,
+                create_missing=True,
+            )
+
+            datalink.accept(_MyInboundModel(id=1, message="First"))
+            stored_model = datalink.accept(_MyInboundModel(id=1, message="Updated"))
+
+            with Session(sqlite_config.get_engine()) as session:
+                local_rows = list(
+                    session.exec(select(LocalInboundDataCatcher.primary_model_type)).all()
+                )
+
+            self.assertEqual(len(local_rows), 1)
+            self.assertEqual(local_rows[0].id, 1)
+            self.assertEqual(local_rows[0].message, "Updated")
+            self.assertEqual(stored_model.id, 1)
+            self.assertEqual(stored_model.message, "Updated")
+            self.assertIsNotNone(datalink.current_model)
+            self.assertEqual(datalink.current_model.message, "Updated")
+
+    def test_inbound_datalink_requires_non_queueing_local_catcher(self):
+        with TemporaryDirectory() as temp_dir:
+            sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
+            other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
+
+            class LocalInboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
             class RemoteInboundDataCatcher(BasicSQLiteDataCatcher):
@@ -681,7 +719,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             with self.assertRaisesRegex(
                     TypeError,
-                    "InboundDataLink requires a non-caching local_type",
+                    "InboundDataLink requires a non-queueing local_type",
                     ):
                 InboundDataLink(
                     datamodel=_MyInboundModel,
@@ -694,7 +732,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
 
-            class LocalInboundDataCatcher(BasicSQLiteDataCatcher):
+            class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
                 sql_config = sqlite_config
 
             class _MyInboundModel(InboundFlowModel, table=False):
@@ -712,7 +750,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
             self.assertIsNotNone(datalink.current_model)
             self.assertEqual(datalink.current_model.message, "Accepted")
 
-    def test_outbound_datalink_requires_caching_local_catcher(self):
+    def test_outbound_datalink_requires_queueing_local_catcher(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
@@ -720,7 +758,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
             class LocalOutboundDataCatcher(BasicSQLiteDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -728,7 +766,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             with self.assertRaisesRegex(
                     TypeError,
-                    "OutBoundDataLink requires a caching local_type",
+                    "OutBoundDataLink requires a queueing local_type",
                     ):
                 OutBoundDataLink(
                     datamodel=_MyUUIDModel,
@@ -737,15 +775,15 @@ class TestDataflowModelRegistration(unittest.TestCase):
                     create_missing=True,
                 )
 
-    def test_outbound_datalink_get_queue_length_counts_local_cache_rows(self):
+    def test_outbound_datalink_get_queue_length_counts_local_queue_rows(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -759,8 +797,8 @@ class TestDataflowModelRegistration(unittest.TestCase):
             )
 
             LocalOutboundDataCatcher.send_model(_MyUUIDModel(message="Primary Only"))
-            LocalOutboundDataCatcher.cache_model(_MyUUIDModel(message="Buffered"))
-            LocalOutboundDataCatcher.cache_model(_MyUUIDModel(message="Buffered Again"))
+            LocalOutboundDataCatcher.queue_model(_MyUUIDModel(message="Buffered"))
+            LocalOutboundDataCatcher.queue_model(_MyUUIDModel(message="Buffered Again"))
 
             self.assertEqual(
                 LocalOutboundDataCatcher.get_number_of_primary_records(),
@@ -773,10 +811,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
                 round_trip = True
 
@@ -805,13 +843,13 @@ class TestDataflowModelRegistration(unittest.TestCase):
 
             self.assertIsNotNone(response_model)
             self.assertEqual(response_model.message, "Reply to Ping")
-            self.assertEqual(LocalOutboundDataCatcher.get_number_of_cached_records(), 0)
+            self.assertEqual(LocalOutboundDataCatcher.get_number_of_queued_records(), 0)
 
     def test_outbound_datalink_exchange_supports_api_remote_catcher(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
             class RemoteOutboundDataCatcher(RESTDataCatcher):
@@ -849,10 +887,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -883,10 +921,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
                 round_trip = True
 
@@ -917,25 +955,25 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 local_rows = list(
                     session.exec(select(LocalOutboundDataCatcher.primary_model_type)).all()
                 )
-                local_cache_rows = list(
-                    session.exec(select(LocalOutboundDataCatcher.cache_model_type)).all()
+                local_queue_rows = list(
+                    session.exec(select(LocalOutboundDataCatcher.queue_model_type)).all()
                 )
 
             self.assertIsNone(response_model)
             self.assertEqual(len(local_rows), 1)
             self.assertEqual(local_rows[0].message, "Ping")
-            self.assertEqual(len(local_cache_rows), 1)
-            self.assertEqual(local_cache_rows[0].cache_reason, OutboundCacheReason.FAIL)
+            self.assertEqual(len(local_queue_rows), 1)
+            self.assertEqual(local_queue_rows[0].queue_reason, OutboundQueueReason.FAIL)
 
     def test_outbound_datalink_sync_drains_queue_before_new_publish(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
                 sent_messages = []
 
@@ -967,7 +1005,7 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 RemoteOutboundDataCatcher.sent_messages,
                 ["Queued First", "Queued Second", "New Third"],
             )
-            self.assertEqual(LocalOutboundDataCatcher.get_number_of_cached_records(), 0)
+            self.assertEqual(LocalOutboundDataCatcher.get_number_of_queued_records(), 0)
             self.assertEqual(len(remote_rows), 3)
 
     def test_outbound_datalink_sync_stops_on_first_replay_failure(self):
@@ -975,10 +1013,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
                 attempted_messages = []
 
@@ -1006,30 +1044,30 @@ class TestDataflowModelRegistration(unittest.TestCase):
             datalink.sync(None)
 
             with Session(sqlite_config.get_engine()) as session:
-                remaining_cache_rows = list(
-                    session.exec(select(LocalOutboundDataCatcher.cache_model_type)).all()
+                remaining_queue_rows = list(
+                    session.exec(select(LocalOutboundDataCatcher.queue_model_type)).all()
                 )
 
             self.assertEqual(
                 RemoteOutboundDataCatcher.attempted_messages,
                 ["Queued First", "Queued Second"],
             )
-            self.assertEqual(LocalOutboundDataCatcher.get_number_of_cached_records(), 2)
+            self.assertEqual(LocalOutboundDataCatcher.get_number_of_queued_records(), 2)
             self.assertEqual(
-                {row.id for row in remaining_cache_rows},
+                {row.id for row in remaining_queue_rows},
                 {second.id, third.id},
             )
-            self.assertNotIn(first.id, {row.id for row in remaining_cache_rows})
+            self.assertNotIn(first.id, {row.id for row in remaining_queue_rows})
 
-    def test_outbound_datalink_sync_drops_orphaned_cache_rows(self):
+    def test_outbound_datalink_sync_drops_orphaned_queue_rows(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
             class _MyUUIDModel(OutboundUUIDModel, table=False):
@@ -1043,12 +1081,12 @@ class TestDataflowModelRegistration(unittest.TestCase):
             )
 
             LocalOutboundDataCatcher.send_model(
-                LocalOutboundDataCatcher.cache_model_type(id=uuid4())
+                LocalOutboundDataCatcher.queue_model_type(id=uuid4())
             )
 
             datalink.sync(None)
 
-            self.assertEqual(LocalOutboundDataCatcher.get_number_of_cached_records(), 0)
+            self.assertEqual(LocalOutboundDataCatcher.get_number_of_queued_records(), 0)
 
     def test_heartbeat_requires_primary_inbound_and_outbound_links(self):
         class OutboundOnlyHeartbeat(Heartbeat):
@@ -1068,13 +1106,13 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 str(Path(temp_dir) / "remote_outbound.sqlite")
             )
 
-            class LocalInboundDataCatcher(BasicSQLiteDataCatcher):
+            class LocalInboundDataCatcher(CachingSQLiteDataCatcher):
                 sql_config = inbound_sqlite_config
 
-            class LocalOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class LocalOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = outbound_sqlite_config
 
-            class RemoteOutboundDataCatcher(SQLiteCacheDataCatcher):
+            class RemoteOutboundDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = remote_outbound_sqlite_config
                 round_trip = True
                 events = []
@@ -1129,17 +1167,17 @@ class TestDataflowModelRegistration(unittest.TestCase):
             self.assertEqual(response_model.message, "Reply to Ping")
             self.assertEqual(len(inbound_rows), 1)
             self.assertEqual(inbound_rows[0].message, "Reply to Ping")
-            self.assertEqual(LocalOutboundDataCatcher.get_number_of_cached_records(), 0)
+            self.assertEqual(LocalOutboundDataCatcher.get_number_of_queued_records(), 0)
 
     def test_datalink_publish_falls_back_to_local_on_remote_failure(self):
         with TemporaryDirectory() as temp_dir:
             sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             other_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "remote.sqlite"))
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = sqlite_config
 
-            class MyOtherDataCatcher(SQLiteCacheDataCatcher):
+            class MyOtherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = other_sqlite_config
 
                 @classmethod
@@ -1163,19 +1201,19 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 local_rows = list(
                     session.exec(select(MyDataCatcher.primary_model_type)).all()
                 )
-                local_cache_rows = list(
-                    session.exec(select(MyDataCatcher.cache_model_type)).all()
+                local_queue_rows = list(
+                    session.exec(select(MyDataCatcher.queue_model_type)).all()
                 )
 
             self.assertEqual(len(local_rows), 1)
             self.assertEqual(local_rows[0].id, datapoint.id)
             self.assertEqual(local_rows[0].message, "Buffered")
-            self.assertEqual(len(local_cache_rows), 1)
-            self.assertEqual(local_cache_rows[0].id, datapoint.id)
-            self.assertEqual(local_cache_rows[0].cache_reason, OutboundCacheReason.FAIL)
-            self.assertIsNotNone(local_cache_rows[0].cached_at)
+            self.assertEqual(len(local_queue_rows), 1)
+            self.assertEqual(local_queue_rows[0].id, datapoint.id)
+            self.assertEqual(local_queue_rows[0].queue_reason, OutboundQueueReason.FAIL)
+            self.assertIsNotNone(local_queue_rows[0].queued_at)
 
-    def test_only_failing_link_caches_when_cache_catchers_share_one_sqlconfig(self):
+    def test_only_failing_link_queues_when_queue_catchers_share_one_sqlconfig(self):
         with TemporaryDirectory() as temp_dir:
             shared_sqlite_config = SQLiteDB.from_path(str(Path(temp_dir) / "local.sqlite"))
             first_remote_sqlite_config = SQLiteDB.from_path(
@@ -1185,16 +1223,16 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 str(Path(temp_dir) / "second_remote.sqlite")
             )
 
-            class MyDataCatcher(SQLiteCacheDataCatcher):
+            class MyDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = shared_sqlite_config
 
-            class AnotherDataCatcher(SQLiteCacheDataCatcher):
+            class AnotherDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = shared_sqlite_config
 
-            class SuccessfulRemoteDataCatcher(SQLiteCacheDataCatcher):
+            class SuccessfulRemoteDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = first_remote_sqlite_config
 
-            class FailingRemoteDataCatcher(SQLiteCacheDataCatcher):
+            class FailingRemoteDataCatcher(SQLiteQueueDataCatcher):
                 sql_config = second_remote_sqlite_config
 
                 @classmethod
@@ -1227,11 +1265,11 @@ class TestDataflowModelRegistration(unittest.TestCase):
                 local_primary_rows = list(
                     session.exec(select(MyDataCatcher.primary_model_type)).all()
                 )
-                first_cache_rows = list(
-                    session.exec(select(MyDataCatcher.cache_model_type)).all()
+                first_queue_rows = list(
+                    session.exec(select(MyDataCatcher.queue_model_type)).all()
                 )
-                second_cache_rows = list(
-                    session.exec(select(AnotherDataCatcher.cache_model_type)).all()
+                second_queue_rows = list(
+                    session.exec(select(AnotherDataCatcher.queue_model_type)).all()
                 )
             with Session(first_remote_sqlite_config.get_engine()) as session:
                 remote_rows = list(
@@ -1241,10 +1279,10 @@ class TestDataflowModelRegistration(unittest.TestCase):
             self.assertEqual(len(local_primary_rows), 1)
             self.assertEqual(local_primary_rows[0].id, failing_datapoint.id)
             self.assertEqual(local_primary_rows[0].message, "Buffered")
-            self.assertEqual(first_cache_rows, [])
-            self.assertEqual(len(second_cache_rows), 1)
-            self.assertEqual(second_cache_rows[0].id, failing_datapoint.id)
-            self.assertEqual(second_cache_rows[0].cache_reason, OutboundCacheReason.FAIL)
+            self.assertEqual(first_queue_rows, [])
+            self.assertEqual(len(second_queue_rows), 1)
+            self.assertEqual(second_queue_rows[0].id, failing_datapoint.id)
+            self.assertEqual(second_queue_rows[0].queue_reason, OutboundQueueReason.FAIL)
             self.assertEqual(len(remote_rows), 1)
             self.assertEqual(remote_rows[0].id, successful_datapoint.id)
             self.assertEqual(remote_rows[0].message, "Published")

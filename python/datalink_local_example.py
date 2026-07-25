@@ -6,7 +6,7 @@
 """
 
 from joop.sql.sqlite import SQLiteDB
-from joop.dataflow.sqlite import SQLiteCacheDataCatcher, BasicSQLiteDataCatcher
+from joop.dataflow.sqlite import SQLiteQueueDataCatcher, BasicSQLiteDataCatcher
 from joop.dataflow.model import OutboundUUIDModel
 from joop.dataflow.link import DataLink
 
@@ -19,7 +19,7 @@ other_sqlite_config = SQLiteDB.from_path("other_example.db")
 
 ##########################
 # Create a DataCatcher to control each DB:
-class MyDataCatcher(SQLiteCacheDataCatcher):
+class MyDataCatcher(SQLiteQueueDataCatcher):
     sql_config = sqlite_config
 
 class MyOtherDataCatcher(BasicSQLiteDataCatcher):
@@ -61,7 +61,7 @@ my_data_link.publish(datapoint)
 # Even with the same model.
 # Just don't name them the same.
 
-class AnotherDataCatcher(SQLiteCacheDataCatcher):
+class AnotherDataCatcher(SQLiteQueueDataCatcher):
     sql_config = sqlite_config
 
 another_sqlite_config = SQLiteDB.from_path("another_example.db")
