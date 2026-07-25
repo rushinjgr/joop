@@ -15,7 +15,7 @@ class Heartbeat(DataFlow):
     heartbeat_datamodel: type[PrimaryOutboundFlowModel] | None = None
     response_datamodel: type[InboundFlowModel] | None = None
     response_local_type: type[DataCatcher] | None = None
-    remote_type: type[InboundFlowModel] | None = None
+    remote_flowmodel_type: type[InboundFlowModel] | None = None
 
     def __init__(self, create_missing: bool = False):
         self._configure_inbound_link_type()
@@ -27,10 +27,10 @@ class Heartbeat(DataFlow):
         """Resolve the inbound response model used by this heartbeat flow."""
         response_datamodel = cls.response_datamodel
         if response_datamodel is None:
-            remote_type = getattr(cls, "remote_type", None)
-            if (isinstance(remote_type, type) and
-                    issubclass(remote_type, InboundFlowModel)):
-                response_datamodel = remote_type
+            remote_flowmodel_type = getattr(cls, "remote_flowmodel_type", None)
+            if (isinstance(remote_flowmodel_type, type) and
+                    issubclass(remote_flowmodel_type, InboundFlowModel)):
+                response_datamodel = remote_flowmodel_type
 
         if response_datamodel is None:
             raise NotImplementedError(
@@ -45,9 +45,10 @@ class Heartbeat(DataFlow):
         """Resolve the local catcher used to persist heartbeat responses."""
         response_local_type = cls.response_local_type
         if response_local_type is None:
-            local_type = getattr(cls, "local_type", None)
-            if isinstance(local_type, type) and issubclass(local_type, DataCatcher):
-                response_local_type = local_type
+            local_datacatcher_type = getattr(cls, "local_datacatcher_type", None)
+            if (isinstance(local_datacatcher_type, type) and
+                    issubclass(local_datacatcher_type, DataCatcher)):
+                response_local_type = local_datacatcher_type
         if response_local_type is None:
             flow_module = sys.modules.get(cls.__module__)
             if flow_module is not None:
@@ -75,7 +76,7 @@ class Heartbeat(DataFlow):
             {
                 "__module__": cls.__module__,
                 "datamodel": response_datamodel,
-                "local_type": response_local_type,
+                "local_datacatcher_type": response_local_type,
             },
         )
 
@@ -85,8 +86,8 @@ class Heartbeat(DataFlow):
         if cls.primary_inbound_data_link_type is not None:
             return
         if (cls.response_datamodel is None and
-                not (isinstance(getattr(cls, "remote_type", None), type) and
-                     issubclass(cls.remote_type, InboundFlowModel)) and
+                not (isinstance(getattr(cls, "remote_flowmodel_type", None), type) and
+                     issubclass(cls.remote_flowmodel_type, InboundFlowModel)) and
                 cls.response_local_type is None):
             return
 

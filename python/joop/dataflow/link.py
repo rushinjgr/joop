@@ -12,8 +12,8 @@ class DataLink:
             sends to a remote datastore or to provide queueing (or buffering)
             during times when the remote is unavailable.'''
     datamodel: type[FlowModel] | None = None
-    local_type: type[DataCatcher] | None = None
-    remote_type: type[DataCatcher] | None = None
+    local_datacatcher_type: type[DataCatcher] | None = None
+    remote_datacatcher_type: type[DataCatcher] | None = None
     local_queueing_required: bool | None = None
     remote_required: bool = True
     local: DataCatcher
@@ -22,8 +22,8 @@ class DataLink:
     def __init__(
             self,
             datamodel: type[FlowModel] | None = None,
-            local_type: type[DataCatcher] | None = None,
-            remote_type: type[DataCatcher] | None = None,
+            local_datacatcher_type: type[DataCatcher] | None = None,
+            remote_datacatcher_type: type[DataCatcher] | None = None,
             create_missing: bool = False,
             ) -> None:
         """ Also initialize DataCatchers (and all that that implies.
@@ -31,40 +31,41 @@ class DataLink:
                 down to the datacatcher setup (it applies to SQL DataCatchers)"""
         if datamodel is not None:
             self.datamodel = datamodel
-        if local_type is not None:
-            self.local_type = local_type
-        if remote_type is not None:
-            self.remote_type = remote_type
+        if local_datacatcher_type is not None:
+            self.local_datacatcher_type = local_datacatcher_type
+        if remote_datacatcher_type is not None:
+            self.remote_datacatcher_type = remote_datacatcher_type
 
         self._check_if_implemented()        
 
         # Configure the datacatchers from the shared flow model type.
-        self.local_type.set_primary_model(self.datamodel)
+        self.local_datacatcher_type.set_primary_model(self.datamodel)
         # Instantiate the datacatcher:
-        self.local = self._setup_datacatcher(data_catcher_type= self.local_type,
+        self.local = self._setup_datacatcher(data_catcher_type= self.local_datacatcher_type,
                                              create_missing= create_missing)
 
-        if self.remote_type is not None:
-            self.remote_type.set_primary_model(self.datamodel)
+        if self.remote_datacatcher_type is not None:
+            self.remote_datacatcher_type.set_primary_model(self.datamodel)
             # Instantiate the datacatcher:
-            self.remote = self._setup_datacatcher(data_catcher_type= self.remote_type,
+            self.remote = self._setup_datacatcher(data_catcher_type= self.remote_datacatcher_type,
                                                  create_missing= create_missing)
 
     def _check_if_implemented(self) -> None:
         """ Verify that we have a bound model and DataCatcher types."""
-        if self.datamodel is None or self.local_type is None:
+        if self.datamodel is None or self.local_datacatcher_type is None:
             raise NotImplementedError(
-                "DataLink requires datamodel and local_type to be defined."
+                "DataLink requires datamodel and local_datacatcher_type to be defined."
             )
-        if self.remote_required and self.remote_type is None:
+        if self.remote_required and self.remote_datacatcher_type is None:
             raise NotImplementedError(
-                "DataLink requires remote_type to be defined."
+                "DataLink requires remote_datacatcher_type to be defined."
             )
         if (self.local_queueing_required is not None and
-                self.local_type.queueing != self.local_queueing_required):
+                self.local_datacatcher_type.queueing != self.local_queueing_required):
             queueing_requirement = "a queueing" if self.local_queueing_required else "a non-queueing"
             raise TypeError(
-                f"{self.__class__.__name__} requires {queueing_requirement} local_type DataCatcher."
+                f"{self.__class__.__name__} requires {queueing_requirement} "
+                "local_datacatcher_type DataCatcher."
             )
     
     def _setup_datacatcher(self, data_catcher_type : Type[DataCatcher], create_missing : bool = False) -> DataCatcher:
@@ -169,7 +170,7 @@ class ArtificialDataLink(InboundDataLink):
     """
 
     remote_required = False
-    remote_type = None
+    remote_datacatcher_type = None
 
     def _fetch(self) -> Optional[InboundFlowModel]:
         """Return the latest local inbound model without consulting a remote."""
@@ -184,8 +185,8 @@ class ArtificialDataLink(InboundDataLink):
 
 class OutBoundDataLink(DataLink):
     # inherited:
-    #local_type: type[DataCatcher] | None = None
-    #remote_type: type[DataCatcher] | None = None
+    #local_datacatcher_type: type[DataCatcher] | None = None
+    #remote_datacatcher_type: type[DataCatcher] | None = None
     #local: DataCatcher
     #remote: DataCatcher
 
@@ -230,9 +231,10 @@ class OutBoundDataLink(DataLink):
             raise TypeError(
                 "OutBoundDataLink.exchange only accepts models matching its datamodel type."
             )
-        if not self.remote_type.round_trip:
+        if not self.remote_datacatcher_type.round_trip:
             raise RuntimeError(
-                "OutBoundDataLink.exchange requires a round-trip remote_type DataCatcher."
+                "OutBoundDataLink.exchange requires a round-trip "
+                "remote_datacatcher_type DataCatcher."
             )
 
         try:

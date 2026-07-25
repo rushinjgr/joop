@@ -40,8 +40,8 @@ class _MyUUIDModel(OutboundUUIDModel, table=False):
 #   datastore is unavailable, or other features.
 class MyDataLink(DataLink):
     datamodel = _MyUUIDModel
-    local_type = MyDataCatcher
-    remote_type = MyOtherDataCatcher
+    local_datacatcher_type = MyDataCatcher
+    remote_datacatcher_type = MyOtherDataCatcher
 
 # `create_missing` tables are to be created if they don't
 # already exist in SQL DataCatchers, etc. 
@@ -71,8 +71,8 @@ class YetAnotherDataCatcher(BasicSQLiteDataCatcher):
 
 class MyOtherDataLink(DataLink):
     datamodel = _MyUUIDModel
-    local_type = AnotherDataCatcher
-    remote_type = YetAnotherDataCatcher
+    local_datacatcher_type = AnotherDataCatcher
+    remote_datacatcher_type = YetAnotherDataCatcher
 
 datapoint = _MyUUIDModel()
 

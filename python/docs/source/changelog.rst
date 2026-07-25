@@ -5,6 +5,17 @@ Version 0.1.6 (2026-07-25)
 --------------------------
 - Breaking change. Big one. All caching data catchers have been renamed to queueing, and inbound data catchers now cache.
 
+Version 0.1.5 (2026-07-13)
+--------------------------
+- Added passthrough ``requests`` verify parameter for DataFlows.
+
+Version 0.1.4 (2026-07-13)
+--------------------------
+- Breaking DataFlow API change: renamed ``DataLink.local_type`` / ``remote_type`` to
+  ``local_datacatcher_type`` / ``remote_datacatcher_type``.
+- Breaking DataFlow API change: renamed ``Heartbeat.remote_type`` to
+  ``Heartbeat.remote_flowmodel_type``
+
 Version 0.1.3 (2026-06-01)
 --------------------------
 - Added runtime hook.

@@ -20,6 +20,7 @@ class RESTDataCatcher(DataCatcher):
     queueing: bool = False
     round_trip: bool = False
     url: str | None = None
+    verify: bool | str = True
 
     @classmethod
     def _get_url(cls) -> str:
@@ -58,6 +59,11 @@ class RESTDataCatcher(DataCatcher):
         return target
 
     @classmethod
+    def _get_verify(cls) -> bool | str:
+        """Return TLS verification settings for outbound HTTPS requests."""
+        return getattr(cls, "verify", True)
+
+    @classmethod
     def _perform_request(
             cls,
             payload: dict,
@@ -67,10 +73,16 @@ class RESTDataCatcher(DataCatcher):
         """POST the payload to the configured REST endpoint."""
         if client is None:
             client = requests.Session()
+        request_kwargs = {
+            "json": payload,
+            "headers": headers,
+        }
+        if not hasattr(client, "application"):
+            request_kwargs["verify"] = cls._get_verify()
+
         return client.post(
             cls._get_request_target(client=client),
-            json=payload,
-            headers=headers,
+            **request_kwargs,
         )
 
     @classmethod
